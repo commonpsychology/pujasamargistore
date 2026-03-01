@@ -1,7 +1,7 @@
 'use client';
+import Link from 'next/link';
 
 // src/components/NepaliCalendar.js
-
 export default function NepaliCalendar() {
   return (
     <section style={{
@@ -9,7 +9,6 @@ export default function NepaliCalendar() {
       margin: '0 auto',
       padding: '48px 24px',
     }}>
-
       {/* ── Section header ── */}
       <div style={{ marginBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -55,18 +54,18 @@ export default function NepaliCalendar() {
             border: 'none',
             overflow: 'hidden',
             width: '100%',
-            height: '740px',
+            height: '700px',
             borderRadius: '8px',
             display: 'block',
           }}
-          allowTransparency="true"
+          allowtransparency="true"
           title="Nepali Calendar"
         />
       </div>
 
       {/* ── Pooja reminder banner ── */}
       <div style={{
-        marginTop: '10px',
+        marginTop: '20px',
         background: 'linear-gradient(135deg, #1e1a0e, #27200a)',
         border: '1px solid #78350f',
         borderRadius: '14px',
@@ -85,7 +84,7 @@ export default function NepaliCalendar() {
             Order your pooja essentials in advance — we deliver same day before 2 PM.
           </p>
         </div>
-        <a
+        <Link
           href="/shop"
           style={{
             background: 'linear-gradient(90deg, #facc15, #f97316)',
@@ -100,9 +99,8 @@ export default function NepaliCalendar() {
           }}
         >
           🛍️ Shop Now
-        </a>
+        </Link>
       </div>
-
     </section>
   );
 }

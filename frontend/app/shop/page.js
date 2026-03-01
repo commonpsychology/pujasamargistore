@@ -3,13 +3,15 @@
 // app/shop/page.js
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import ProductCard from '../../src/components/ProductCard';
 import { useCart } from '../../src/context/CartContext';
 
 const CATEGORIES = ['All', 'Diyas & Lamps', 'Incense', 'Brass Items', 'Flowers & Garlands', 'Puja Kits', 'Idols', 'Cloths & Decor', 'Sweets & Prasad'];
 
 export default function Shop() {
-  const { itemCount } = useCart();
+  const { cartCount } = useCart();
+  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,27 +54,11 @@ export default function Shop() {
           margin: 0 auto;
         }
 
-        /* Header */
+        /* Header — cart pill only */
         .shop-header {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
+          justify-content: flex-end;
           margin-bottom: 36px;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        .shop-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(36px, 5vw, 56px);
-          font-weight: 700;
-          color: #facc15;
-          margin: 0;
-          line-height: 1;
-        }
-        .shop-subtitle {
-          color: #475569;
-          font-size: 13px;
-          margin: 4px 0 0;
         }
         .cart-pill {
           display: flex;
@@ -85,6 +71,29 @@ export default function Shop() {
           font-size: 14px;
           padding: 10px 18px;
           border-radius: 999px;
+          cursor: pointer;
+          transition: background 0.2s, border-color 0.2s, transform 0.15s;
+          user-select: none;
+        }
+        .cart-pill:hover {
+          background: rgba(34,197,94,0.18);
+          border-color: rgba(34,197,94,0.5);
+          transform: translateY(-1px);
+        }
+        .cart-pill:active { transform: scale(0.97); }
+
+        .cart-badge {
+          background: #22c55e;
+          color: #0f172a;
+          font-size: 11px;
+          font-weight: 900;
+          min-width: 20px;
+          height: 20px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 5px;
         }
 
         /* Controls */
@@ -194,14 +203,14 @@ export default function Shop() {
 
       <main className="shop-page">
 
-        {/* Header */}
+        {/* Header — cart pill only, clicking goes to /checkout */}
         <div className="shop-header">
-          <div>
-            <h1 className="shop-title">🪔 Shop</h1>
-            <p className="shop-subtitle">Authentic pooja essentials, delivered same-day</p>
-          </div>
-          <div className="cart-pill">
-            🛒 <span>{itemCount} item{itemCount !== 1 ? 's' : ''} in cart</span>
+          <div className="cart-pill" onClick={() => router.push('/checkout')}>
+            🛒
+            <span>{cartCount} item{cartCount !== 1 ? 's' : ''} in cart</span>
+            {cartCount > 0 && (
+              <span className="cart-badge">{cartCount}</span>
+            )}
           </div>
         </div>
 

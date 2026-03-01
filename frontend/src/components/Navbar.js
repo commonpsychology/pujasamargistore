@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '../context/CartContext';
 
 export default function Navbar() {
-  const { itemCount } = useCart();
+  const { cartCount } = useCart();
   const [isMounted, setIsMounted] = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
 
@@ -33,7 +33,7 @@ export default function Navbar() {
               <div className="relative w-16 h-16 md:w-20 md:h-20 flex-shrink-0">
                 <div className="w-full h-full rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.5)] bg-amber-900 flex items-center justify-center">
                   <Image
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=PuskarRajNeupane"
+                    src='/images/buba.png'
                     alt="पण्डित पुष्कर राज न्यौपाने"
                     fill className="object-cover" unoptimized
                     onError={(e) => {
@@ -54,8 +54,9 @@ export default function Navbar() {
             </div>
 
             {/* CENTER: NAV LINKS */}
-            <ul className="hidden md:flex items-center gap-10 text-base font-bold text-yellow-100" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <ul className="hidden md:flex items-center gap-8 text-base font-bold text-yellow-100" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <NavItem href="/shop"     label="🛍️ Shop" />
+              <NavItem href="/cheena"   label="🔮 चिना" special />
               <NavItem href="/order"    label="📿 Order Puja" />
               <NavItem href="/about"    label="📖 About Us" />
               <NavItem href="/contact"  label="📬 Contact" />
@@ -82,14 +83,14 @@ export default function Navbar() {
 
               {/* CART */}
               <Link
-                href="/cart"
+                href="/checkout"
                 className="relative flex items-center gap-2 rounded-xl bg-yellow-400 px-5 py-2.5 text-sm font-extrabold text-[#111827] shadow-lg transition-all hover:bg-yellow-300 hover:scale-[1.04]"
               >
                 🛒
                 <span className="hidden sm:inline">Cart</span>
-                {isMounted && itemCount > 0 && (
+                {isMounted && cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">
-                    {itemCount > 9 ? '9+' : itemCount}
+                    {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}
               </Link>
@@ -116,19 +117,39 @@ export default function Navbar() {
                   <p className="text-yellow-600 text-xs">ठिमी, भक्तपुर</p>
                 </div>
               </div>
+
               {[
-                { href: '/shop',     label: '🛍️ Shop' },
-                { href: '/order',    label: '📿 कर्मकाण्ड' },
-                { href: '/about',    label: '📖 About Us' },
-                { href: '/contact',  label: '📬 Contact' },
-                { href: '/policies', label: '📜 Policies' },
+                { href: '/shop',     label: '🛍️ Shop',        highlight: false },
+                { href: '/cheena',   label: '🔮 चिना',         highlight: true  },
+                { href: '/order',    label: '📿 कर्मकाण्ड',    highlight: false },
+                { href: '/about',    label: '📖 About Us',     highlight: false },
+                { href: '/contact',  label: '📬 Contact',      highlight: false },
+                { href: '/policies', label: '📜 Policies',     highlight: false },
               ].map(l => (
-                <Link key={l.href} href={l.href}
-                  className="text-yellow-200 font-bold text-base hover:text-yellow-400 transition py-1"
-                  onClick={() => setMenuOpen(false)}>
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`font-bold text-base transition py-1 ${l.highlight ? 'text-amber-400 hover:text-amber-300' : 'text-yellow-200 hover:text-yellow-400'}`}
+                  onClick={() => setMenuOpen(false)}
+                >
                   {l.label}
                 </Link>
               ))}
+
+              {/* Mobile cart */}
+              <Link
+                href="/checkout"
+                className="flex items-center gap-2 text-yellow-200 font-bold text-base hover:text-yellow-400 transition py-1"
+                onClick={() => setMenuOpen(false)}
+              >
+                🛒 Cart
+                {isMounted && cartCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </Link>
+
               <a href="tel:9849350088" className="text-yellow-300 font-semibold hover:text-yellow-400 transition text-sm pt-2 border-t border-yellow-400/20">
                 📞 ९८४९३५००८८
               </a>
@@ -140,12 +161,15 @@ export default function Navbar() {
   );
 }
 
-function NavItem({ href, label }) {
+function NavItem({ href, label, special }) {
   return (
     <li className="relative group" style={{ listStyle: 'none' }}>
-      <Link href={href} className="cursor-pointer text-yellow-100 transition-colors duration-300 hover:text-white">
+      <Link
+        href={href}
+        className={`cursor-pointer transition-colors duration-300 ${special ? 'text-amber-400 hover:text-amber-300' : 'text-yellow-100 hover:text-white'}`}
+      >
         {label}
-        <span className="absolute left-0 -bottom-2 h-[3px] w-0 rounded-full bg-yellow-400 transition-all duration-300 group-hover:w-full" />
+        <span className={`absolute left-0 -bottom-2 h-[3px] w-0 rounded-full transition-all duration-300 group-hover:w-full ${special ? 'bg-amber-400' : 'bg-yellow-400'}`} />
       </Link>
     </li>
   );

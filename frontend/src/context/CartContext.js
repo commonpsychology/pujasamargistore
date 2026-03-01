@@ -1,11 +1,6 @@
 'use client';
 
 // src/context/CartContext.js
-// ─────────────────────────────────────────────────────────────
-// Self-contained cart state — replaces the missing store-context.
-// Wrap your root layout with <CartProvider> and use useCart()
-// anywhere inside Client Components.
-// ─────────────────────────────────────────────────────────────
 
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 
@@ -61,23 +56,32 @@ export function CartProvider({ children }) {
     localStorage.setItem('pooja_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart     = useCallback((product, qty = 1, variant = null) =>
+  const addToCart      = useCallback((product, qty = 1, variant = null) =>
     dispatch({ type: 'ADD', product, qty, variant }), []);
 
   const removeFromCart = useCallback((key) =>
     dispatch({ type: 'REMOVE', key }), []);
 
-  const setQty        = useCallback((key, qty) =>
+  const setQty         = useCallback((key, qty) =>
     dispatch({ type: 'SET_QTY', key, qty }), []);
 
-  const clearCart     = useCallback(() =>
+  const clearCart      = useCallback(() =>
     dispatch({ type: 'CLEAR' }), []);
 
-  const cartCount    = cart.reduce((acc, i) => acc + i.qty, 0);
-  const cartTotal    = cart.reduce((acc, i) => acc + i.product.price * i.qty, 0);
+  const cartCount = cart.reduce((acc, i) => acc + i.qty, 0);
+  const cartTotal = cart.reduce((acc, i) => acc + i.product.price * i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ cart, cartCount, cartTotal, addToCart, removeFromCart, setQty, clearCart }}>
+    <CartContext.Provider value={{
+      cart,
+      cartCount,
+      cartTotal,
+      itemCount: cartCount,   // ← alias so any file using itemCount still works
+      addToCart,
+      removeFromCart,
+      setQty,
+      clearCart,
+    }}>
       {children}
     </CartContext.Provider>
   );
