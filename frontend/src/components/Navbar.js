@@ -57,7 +57,7 @@ export default function Navbar() {
             <ul className="hidden md:flex items-center gap-8 text-base font-bold text-yellow-100" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               <NavItem href="/shop"     label="🛍️ Shop" />
               <NavItem href="/cheena"   label="🔮 चिना" special />
-              <NavItem href="/order"    label="📿 Order Puja" />
+            
               <NavItem href="/about"    label="📖 About Us" />
               <NavItem href="/contact"  label="📬 Contact" />
               <NavItem href="/policies" label="📜 Policies" />
@@ -121,7 +121,7 @@ export default function Navbar() {
               {[
                 { href: '/shop',     label: '🛍️ Shop',        highlight: false },
                 { href: '/cheena',   label: '🔮 चिना',         highlight: true  },
-                { href: '/order',    label: '📿 कर्मकाण्ड',    highlight: false },
+               
                 { href: '/about',    label: '📖 About Us',     highlight: false },
                 { href: '/contact',  label: '📬 Contact',      highlight: false },
                 { href: '/policies', label: '📜 Policies',     highlight: false },

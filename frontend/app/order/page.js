@@ -1,94 +1,243 @@
 'use client';
-
 // app/order/page.js
-// Puja & Karma Kanda ordering page
-// On card click → modal form → saves name, location, puja type to DB via /api/puja-orders
+// Select a puja → its required samagri items are previewed with prices → Add all to cart
 
 import { useState, useCallback } from 'react';
+import { useCart } from '../../src/context/CartContext';
+import { useRouter } from 'next/navigation';
 
-const PUJAS = [
-  // Festivals
-  { id: 1,  type: 'festival', emoji: '🪔', name: 'Tihar Puja',         nameNe: 'तिहार पूजा',          duration: '3–5 days',  price: 'From Rs. 2100', desc: 'Lakshmi Puja, Gobardhan, Bhai Tika with full ritual setup and materials.' },
-  { id: 2,  type: 'festival', emoji: '⚔️', name: 'Dashain Puja',       nameNe: 'दशैं पूजा',           duration: '10 days',   price: 'From Rs. 3500', desc: 'Ghatasthapana to Vijaya Dashami — complete Navaratri and tika ceremony.' },
-  { id: 3,  type: 'festival', emoji: '🌊', name: 'Chhath Puja',        nameNe: 'छठ पूजा',             duration: '4 days',    price: 'From Rs. 1800', desc: 'Surya Shashthi vrat with evening and morning arghya at river or kunda.' },
-  { id: 4,  type: 'festival', emoji: '🐍', name: 'Nag Panchami',       nameNe: 'नाग पञ्चमी',          duration: '1 day',     price: 'From Rs. 800',  desc: 'Naga deity worship with milk offering, protective rituals for the home.' },
-  { id: 5,  type: 'festival', emoji: '🌸', name: 'Teej Puja',          nameNe: 'तीज पूजा',            duration: '1 day',     price: 'From Rs. 1100', desc: 'Haritalika Teej vrat for married women — Shiva-Parvati puja with darshan.' },
-  { id: 6,  type: 'festival', emoji: '🌕', name: 'Kojagrat Purnima',   nameNe: 'कोजाग्रत पूर्णिमा',   duration: '1 night',   price: 'From Rs. 1200', desc: 'Lakshmi Puja on the full moon night with all-night jagaran rituals.' },
-  { id: 7,  type: 'festival', emoji: '🎋', name: 'Krishna Janmashtami',nameNe: 'कृष्ण जन्माष्टमी',    duration: '1 day',     price: 'From Rs. 950',  desc: 'Midnight birth celebration of Lord Krishna with janma abhishek.' },
-  { id: 8,  type: 'festival', emoji: '☀️', name: 'Makar Sankranti',    nameNe: 'माघे सङ्क्रान्ति',    duration: '1 day',     price: 'From Rs. 700',  desc: 'Holy dip at river confluence, til-ghee havan, and Surya Narayan puja.' },
-  { id: 9,  type: 'festival', emoji: '🌺', name: 'Ram Navami Puja',    nameNe: 'राम नवमी पूजा',       duration: '1 day',     price: 'From Rs. 900',  desc: 'Lord Rama birth anniversary puja with recitation of Ramacharitmanas.' },
-  { id: 10, type: 'festival', emoji: '🔱', name: 'Maha Shivratri',     nameNe: 'महाशिवरात्री',        duration: '1 night',   price: 'From Rs. 1300', desc: 'All-night Shiva jagaran, Rudrabhishek with Panchamrit, 108 diya offering.' },
+// ─── Puja Samagri Data ────────────────────────────────────────────────────────
+// Each puja has a list of required items with individual prices.
+// Cart receives each item as a separate product entry.
 
-  // Karma Kanda (Life Rituals)
-  { id: 11, type: 'karma',    emoji: '🏠', name: 'Griha Pravesh',       nameNe: 'गृहप्रवेश',           duration: '1 day',     price: 'From Rs. 4500', desc: 'Complete housewarming — Vastu puja, kalash sthapana, and grihashanti havan.' },
-  { id: 12, type: 'karma',    emoji: '👶', name: 'Nwaran (Baby Naming)',nameNe: 'न्वारन संस्कार',       duration: 'Half day',  price: 'From Rs. 2800', desc: 'Traditional Nwaran ceremony — naming, sun darshan, rice feeding ritual.' },
-  { id: 13, type: 'karma',    emoji: '✂️', name: 'Chudakarma',          nameNe: 'चूडाकर्म संस्कार',    duration: 'Half day',  price: 'From Rs. 2200', desc: 'First hair-cutting ritual for boys with havan and family blessing.' },
-  { id: 14, type: 'karma',    emoji: '📿', name: 'Bratabandha',         nameNe: 'ब्रतबन्ध',            duration: '1 day',     price: 'From Rs. 6500', desc: 'Sacred thread ceremony — upanayana, yagyopavit, and Gayatri mantra initiation.' },
-  { id: 15, type: 'karma',    emoji: '💍', name: 'Vivah (Wedding Puja)',nameNe: 'विवाह पूजा',          duration: '2 days',    price: 'From Rs. 9500', desc: 'Full Vedic wedding — lagna puja, saptapadi, sindur daan and bidaai.' },
-  { id: 16, type: 'karma',    emoji: '🌾', name: 'Pasni (Rice Feeding)',nameNe: 'पस्नी',               duration: 'Half day',  price: 'From Rs. 2500', desc: 'Annaprashana — first solid food ceremony for baby with family havan.' },
-  { id: 17, type: 'karma',    emoji: '📖', name: 'Vidyarambha',         nameNe: 'विद्यारम्भ',          duration: 'Half day',  price: 'From Rs. 1800', desc: 'Saraswati puja and first writing initiation for children starting school.' },
-  { id: 18, type: 'karma',    emoji: '🕊️', name: 'Shraddha & Pinda',   nameNe: 'श्राद्ध पूजा',        duration: '1 day',     price: 'From Rs. 3200', desc: 'Pitru tarpan, pinda daan, and annual shraddha for ancestors at home or ghat.' },
-  { id: 19, type: 'karma',    emoji: '🔥', name: 'Havan & Yagya',       nameNe: 'हवन यज्ञ',           duration: '2–4 hrs',   price: 'From Rs. 2000', desc: 'Customized havan for health, prosperity, or any occasion with pandit.' },
-  { id: 20, type: 'karma',    emoji: '🏡', name: 'Vastu Shanti',        nameNe: 'वास्तु शान्ति',       duration: '1 day',     price: 'From Rs. 3800', desc: 'Vastu dosha removal, directional puja, and shanti havan for peace at home.' },
-  { id: 21, type: 'karma',    emoji: '🌙', name: 'Satyanarayan Katha',  nameNe: 'सत्यनारायण कथा',     duration: '3–4 hrs',   price: 'From Rs. 1500', desc: 'Lord Vishnu Satyanarayan Vrat katha with prasad, kalash, and panchamrit.' },
-  { id: 22, type: 'karma',    emoji: '💫', name: 'Navagrah Puja',       nameNe: 'नवग्रह पूजा',         duration: '2–3 hrs',   price: 'From Rs. 2400', desc: 'Nine planetary deity worship to remove dosh and bring astrological harmony.' },
+const PUJA_SAMAGRI = [
+  {
+    id: 'tihar',
+    type: 'festival',
+    emoji: '🪔',
+    name: 'Tihar Puja',
+    nameNe: 'तिहार पूजा',
+    desc: 'Lakshmi Puja, Gobardhan & Bhai Tika — complete samagri set.',
+    items: [
+      { id: 'tihar-01', name: 'Marigold Garland (Sayapatri)',  nameNe: 'सयपत्री माला',     qty: 5,  unit: 'pcs', price: 60  },
+      { id: 'tihar-02', name: 'Clay Diyas',                    nameNe: 'माटोको दियो',       qty: 21, unit: 'pcs', price: 10  },
+      { id: 'tihar-03', name: 'Mustard Oil (100ml)',           nameNe: 'तोरीको तेल',        qty: 1,  unit: 'btl', price: 120 },
+      { id: 'tihar-04', name: 'Red Tika Powder (Sindhur)',     nameNe: 'सिन्दूर',           qty: 1,  unit: 'pkt', price: 40  },
+      { id: 'tihar-05', name: 'Dhoop Agarbatti (Sandalwood)',  nameNe: 'धूप अगरबत्ती',      qty: 2,  unit: 'box', price: 80  },
+      { id: 'tihar-06', name: 'Panchamrit (Set)',              nameNe: 'पञ्चामृत',           qty: 1,  unit: 'set', price: 180 },
+      { id: 'tihar-07', name: 'Khoi (Popped Rice)',            nameNe: 'खोई',                qty: 2,  unit: 'pkt', price: 35  },
+      { id: 'tihar-08', name: 'Sel Roti Mix',                  nameNe: 'सेल रोटी मिक्स',    qty: 1,  unit: 'kg',  price: 150 },
+      { id: 'tihar-09', name: 'Akshata (Coloured Rice)',       nameNe: 'अक्षता',             qty: 1,  unit: 'pkt', price: 30  },
+      { id: 'tihar-10', name: 'Copper Kalash',                 nameNe: 'तामाको कलश',        qty: 1,  unit: 'pcs', price: 350 },
+    ],
+  },
+  {
+    id: 'dashain',
+    type: 'festival',
+    emoji: '⚔️',
+    name: 'Dashain Puja',
+    nameNe: 'दशैं पूजा',
+    desc: 'Ghatasthapana to Vijaya Dashami — complete Navaratri samagri.',
+    items: [
+      { id: 'dashain-01', name: 'Jamara Seeds (Barley)',        nameNe: 'जमरा बीउ',           qty: 2,  unit: 'pkt', price: 50  },
+      { id: 'dashain-02', name: 'Sand / Black Soil',            nameNe: 'माटो',               qty: 1,  unit: 'bag', price: 40  },
+      { id: 'dashain-03', name: 'Ghatasthapana Kalash Set',     nameNe: 'घटस्थापना सेट',      qty: 1,  unit: 'set', price: 450 },
+      { id: 'dashain-04', name: 'Red Cloth (2m)',               nameNe: 'रातो कपडा',          qty: 1,  unit: 'pcs', price: 200 },
+      { id: 'dashain-05', name: 'Tika Ingredients (Full Set)',  nameNe: 'टीका सेट',           qty: 1,  unit: 'set', price: 280 },
+      { id: 'dashain-06', name: 'Coconut',                      nameNe: 'नरिवल',              qty: 2,  unit: 'pcs', price: 80  },
+      { id: 'dashain-07', name: 'Dhoop Agarbatti Pack',         nameNe: 'धूप अगरबत्ती',      qty: 3,  unit: 'box', price: 80  },
+      { id: 'dashain-08', name: 'Panchamrit (Set)',             nameNe: 'पञ्चामृत',           qty: 1,  unit: 'set', price: 180 },
+      { id: 'dashain-09', name: 'Akshata (Coloured Rice)',      nameNe: 'अक्षता',             qty: 2,  unit: 'pkt', price: 30  },
+      { id: 'dashain-10', name: 'Brass Diya (Large)',           nameNe: 'पित्तलको दियो',      qty: 1,  unit: 'pcs', price: 320 },
+      { id: 'dashain-11', name: 'Puja Flower Mix',              nameNe: 'फूल मिक्स',          qty: 3,  unit: 'pkt', price: 60  },
+    ],
+  },
+  {
+    id: 'shivratri',
+    type: 'festival',
+    emoji: '🔱',
+    name: 'Maha Shivratri',
+    nameNe: 'महाशिवरात्री',
+    desc: 'All-night Shiva jagaran with Rudrabhishek & 108 diya offering.',
+    items: [
+      { id: 'shiv-01', name: 'Bilva Leaves (Bel Patra)',        nameNe: 'बेलपत्र',            qty: 1,  unit: 'bunch', price: 60  },
+      { id: 'shiv-02', name: 'Dhatura Flower',                  nameNe: 'धतुरा फूल',          qty: 1,  unit: 'pkt',   price: 50  },
+      { id: 'shiv-03', name: 'Raw Milk (1L)',                   nameNe: 'कच्चा दूध',           qty: 2,  unit: 'ltr',   price: 120 },
+      { id: 'shiv-04', name: 'Panchamrit (Set)',                nameNe: 'पञ्चामृत',            qty: 2,  unit: 'set',   price: 180 },
+      { id: 'shiv-05', name: 'Rudraksha Mala',                  nameNe: 'रुद्राक्ष माला',      qty: 1,  unit: 'pcs',   price: 650 },
+      { id: 'shiv-06', name: 'Clay Diyas (Pack of 108)',        nameNe: 'माटोको दियो',         qty: 1,  unit: 'pack',  price: 180 },
+      { id: 'shiv-07', name: 'Camphor (Kapoor)',                nameNe: 'कपूर',                qty: 2,  unit: 'pkt',   price: 45  },
+      { id: 'shiv-08', name: 'Charcoal Dhoop',                  nameNe: 'कोइला धूप',           qty: 1,  unit: 'pkt',   price: 90  },
+      { id: 'shiv-09', name: 'Chandan (Sandalwood Paste)',      nameNe: 'चन्दन',               qty: 1,  unit: 'tube',  price: 130 },
+      { id: 'shiv-10', name: 'Black Sesame Seeds',              nameNe: 'तिल',                 qty: 1,  unit: 'pkt',   price: 40  },
+    ],
+  },
+  {
+    id: 'satyanarayan',
+    type: 'karma',
+    emoji: '🌙',
+    name: 'Satyanarayan Katha',
+    nameNe: 'सत्यनारायण कथा',
+    desc: 'Lord Vishnu Vrat katha with kalash, panchamrit & prasad.',
+    items: [
+      { id: 'saty-01', name: 'Banana (Kera)',                   nameNe: 'केरा',               qty: 5,  unit: 'pcs',  price: 20  },
+      { id: 'saty-02', name: 'Panchamrit (Set)',                nameNe: 'पञ्चामृत',            qty: 2,  unit: 'set',  price: 180 },
+      { id: 'saty-03', name: 'Copper Kalash',                   nameNe: 'तामाको कलश',         qty: 1,  unit: 'pcs',  price: 350 },
+      { id: 'saty-04', name: 'Yellow Cloth (2m)',               nameNe: 'पहेंलो कपडा',         qty: 1,  unit: 'pcs',  price: 180 },
+      { id: 'saty-05', name: 'Tulsi Leaves',                    nameNe: 'तुलसी पत्र',          qty: 1,  unit: 'bunch',price: 30  },
+      { id: 'saty-06', name: 'Suji (Semolina) 250g',           nameNe: 'सुजी',                qty: 2,  unit: 'pkt',  price: 60  },
+      { id: 'saty-07', name: 'Dhoop Agarbatti Pack',            nameNe: 'धूप अगरबत्ती',       qty: 1,  unit: 'box',  price: 80  },
+      { id: 'saty-08', name: 'Ghee (200ml)',                    nameNe: 'घिउ',                qty: 1,  unit: 'jar',  price: 280 },
+      { id: 'saty-09', name: 'Akshata (Coloured Rice)',         nameNe: 'अक्षता',              qty: 1,  unit: 'pkt',  price: 30  },
+      { id: 'saty-10', name: 'Brass Diya (Small)',              nameNe: 'पित्तलको दियो',       qty: 2,  unit: 'pcs',  price: 180 },
+    ],
+  },
+  {
+    id: 'griha-pravesh',
+    type: 'karma',
+    emoji: '🏠',
+    name: 'Griha Pravesh',
+    nameNe: 'गृहप्रवेश',
+    desc: 'Vastu puja, kalash sthapana & grihashanti havan samagri.',
+    items: [
+      { id: 'grih-01', name: 'Havan Kund (Medium)',             nameNe: 'हवन कुण्ड',          qty: 1,  unit: 'pcs',  price: 850 },
+      { id: 'grih-02', name: 'Havan Samagri (1kg)',             nameNe: 'हवन सामग्री',        qty: 2,  unit: 'kg',   price: 320 },
+      { id: 'grih-03', name: 'Copper Kalash (Large)',           nameNe: 'ठूलो कलश',           qty: 1,  unit: 'pcs',  price: 550 },
+      { id: 'grih-04', name: 'Coconut',                         nameNe: 'नरिवल',               qty: 5,  unit: 'pcs',  price: 80  },
+      { id: 'grih-05', name: 'Mango Leaves (Aamko Paat)',       nameNe: 'आँपको पात',           qty: 2,  unit: 'bunch',price: 50  },
+      { id: 'grih-06', name: 'Red Cloth (3m)',                  nameNe: 'रातो कपडा',           qty: 1,  unit: 'pcs',  price: 280 },
+      { id: 'grih-07', name: 'Camphor (Kapoor)',                nameNe: 'कपूर',                qty: 3,  unit: 'pkt',  price: 45  },
+      { id: 'grih-08', name: 'Ghee (500ml)',                    nameNe: 'घिउ',                qty: 1,  unit: 'jar',  price: 620 },
+      { id: 'grih-09', name: 'Panchamrit (Set)',                nameNe: 'पञ्चामृत',            qty: 2,  unit: 'set',  price: 180 },
+      { id: 'grih-10', name: 'Puja Flower Mix',                 nameNe: 'फूल मिक्स',           qty: 5,  unit: 'pkt',  price: 60  },
+      { id: 'grih-11', name: 'Lal Chandan (Red Sandalwood)',    nameNe: 'रातो चन्दन',          qty: 1,  unit: 'pkt',  price: 150 },
+      { id: 'grih-12', name: 'Dhoop Agarbatti (3 Box)',         nameNe: 'धूप अगरबत्ती',       qty: 3,  unit: 'box',  price: 80  },
+    ],
+  },
+  {
+    id: 'bratabandha',
+    type: 'karma',
+    emoji: '📿',
+    name: 'Bratabandha',
+    nameNe: 'ब्रतबन्ध',
+    desc: 'Sacred thread ceremony — upanayana, yagyopavit & Gayatri mantra.',
+    items: [
+      { id: 'brat-01', name: 'Yagyopavit (Sacred Thread)',      nameNe: 'यज्ञोपवित',           qty: 3,  unit: 'pcs',  price: 120 },
+      { id: 'brat-02', name: 'Havan Kund (Medium)',             nameNe: 'हवन कुण्ड',            qty: 1,  unit: 'pcs',  price: 850 },
+      { id: 'brat-03', name: 'Havan Samagri (500g)',            nameNe: 'हवन सामग्री',          qty: 2,  unit: 'pkt',  price: 180 },
+      { id: 'brat-04', name: 'White Dhoti Cloth (3m)',          nameNe: 'सेतो धोती',            qty: 1,  unit: 'pcs',  price: 350 },
+      { id: 'brat-05', name: 'Copper Kalash',                   nameNe: 'तामाको कलश',          qty: 1,  unit: 'pcs',  price: 350 },
+      { id: 'brat-06', name: 'Ghee (200ml)',                    nameNe: 'घिउ',                 qty: 2,  unit: 'jar',  price: 280 },
+      { id: 'brat-07', name: 'Panchamrit (Set)',                nameNe: 'पञ्चामृत',             qty: 1,  unit: 'set',  price: 180 },
+      { id: 'brat-08', name: 'Tika Set (Full)',                 nameNe: 'टीका सेट',             qty: 1,  unit: 'set',  price: 280 },
+      { id: 'brat-09', name: 'Black Sesame Seeds',              nameNe: 'तिल',                  qty: 1,  unit: 'pkt',  price: 40  },
+      { id: 'brat-10', name: 'Darbha Grass',                    nameNe: 'दर्भा',                qty: 1,  unit: 'bunch',price: 60  },
+    ],
+  },
+  {
+    id: 'vivah',
+    type: 'karma',
+    emoji: '💍',
+    name: 'Vivah Puja',
+    nameNe: 'विवाह पूजा',
+    desc: 'Full Vedic wedding — lagna puja, saptapadi & sindur daan.',
+    items: [
+      { id: 'vivah-01', name: 'Sindur (Vermilion Set)',         nameNe: 'सिन्दूर सेट',         qty: 2,  unit: 'set',  price: 150 },
+      { id: 'vivah-02', name: 'Copper Kalash (Large)',          nameNe: 'ठूलो कलश',            qty: 2,  unit: 'pcs',  price: 550 },
+      { id: 'vivah-03', name: 'Havan Kund (Large)',             nameNe: 'ठूलो हवन कुण्ड',      qty: 1,  unit: 'pcs',  price: 1200},
+      { id: 'vivah-04', name: 'Havan Samagri (2kg)',            nameNe: 'हवन सामग्री',          qty: 1,  unit: 'set',  price: 580 },
+      { id: 'vivah-05', name: 'Marigold Garland x10',           nameNe: 'माला सेट',             qty: 10, unit: 'pcs',  price: 60  },
+      { id: 'vivah-06', name: 'Ghee (1L)',                      nameNe: 'घिउ',                 qty: 1,  unit: 'jar',  price: 1100},
+      { id: 'vivah-07', name: 'Panchamrit (Large Set)',         nameNe: 'पञ्चामृत',             qty: 3,  unit: 'set',  price: 180 },
+      { id: 'vivah-08', name: 'Puja Flower Mix (Large)',        nameNe: 'फूल मिक्स',            qty: 8,  unit: 'pkt',  price: 60  },
+      { id: 'vivah-09', name: 'Red & Yellow Cloth (3m each)',   nameNe: 'कपडा सेट',             qty: 1,  unit: 'set',  price: 650 },
+      { id: 'vivah-10', name: 'Darbha Grass',                   nameNe: 'दर्भा',                qty: 2,  unit: 'bunch',price: 60  },
+      { id: 'vivah-11', name: 'Coconut',                        nameNe: 'नरिवल',                qty: 5,  unit: 'pcs',  price: 80  },
+      { id: 'vivah-12', name: 'Akshata (Large)',                nameNe: 'अक्षता',               qty: 3,  unit: 'pkt',  price: 30  },
+    ],
+  },
+  {
+    id: 'nwaran',
+    type: 'karma',
+    emoji: '👶',
+    name: 'Nwaran (Baby Naming)',
+    nameNe: 'न्वारन संस्कार',
+    desc: 'Traditional naming, sun darshan & rice feeding ritual.',
+    items: [
+      { id: 'nwar-01', name: 'Panchamrit (Set)',                nameNe: 'पञ्चामृत',             qty: 1,  unit: 'set',  price: 180 },
+      { id: 'nwar-02', name: 'Yellow Cloth (1m)',               nameNe: 'पहेंलो कपडा',          qty: 1,  unit: 'pcs',  price: 120 },
+      { id: 'nwar-03', name: 'Puja Flower Mix',                 nameNe: 'फूल मिक्स',             qty: 2,  unit: 'pkt',  price: 60  },
+      { id: 'nwar-04', name: 'Akshata (Coloured Rice)',         nameNe: 'अक्षता',               qty: 1,  unit: 'pkt',  price: 30  },
+      { id: 'nwar-05', name: 'Tika Set',                        nameNe: 'टीका सेट',              qty: 1,  unit: 'set',  price: 280 },
+      { id: 'nwar-06', name: 'Dhoop Agarbatti',                 nameNe: 'धूप अगरबत्ती',         qty: 1,  unit: 'box',  price: 80  },
+      { id: 'nwar-07', name: 'Small Brass Diya',                nameNe: 'पित्तलको दियो',        qty: 1,  unit: 'pcs',  price: 180 },
+    ],
+  },
+  {
+    id: 'navagrah',
+    type: 'karma',
+    emoji: '💫',
+    name: 'Navagrah Puja',
+    nameNe: 'नवग्रह पूजा',
+    desc: 'Nine planetary deity worship to remove dosh & bring harmony.',
+    items: [
+      { id: 'nava-01', name: 'Navagrah Samagri Set',            nameNe: 'नवग्रह सामग्री',       qty: 1,  unit: 'set',  price: 950 },
+      { id: 'nava-02', name: 'Nine Coloured Cloth (1m each)',   nameNe: 'नौ रंगको कपडा',        qty: 1,  unit: 'set',  price: 720 },
+      { id: 'nava-03', name: 'Havan Samagri (500g)',            nameNe: 'हवन सामग्री',           qty: 1,  unit: 'pkt',  price: 180 },
+      { id: 'nava-04', name: 'Ghee (200ml)',                    nameNe: 'घिउ',                  qty: 1,  unit: 'jar',  price: 280 },
+      { id: 'nava-05', name: 'Panchamrit (Set)',                nameNe: 'पञ्चामृत',              qty: 1,  unit: 'set',  price: 180 },
+      { id: 'nava-06', name: 'Black Sesame & Til Mix',          nameNe: 'तिल मिक्स',             qty: 1,  unit: 'pkt',  price: 60  },
+      { id: 'nava-07', name: 'Nine Grain Mix (Navadhanya)',     nameNe: 'नवधान्य',               qty: 1,  unit: 'pkt',  price: 150 },
+      { id: 'nava-08', name: 'Camphor (Kapoor)',                nameNe: 'कपूर',                  qty: 2,  unit: 'pkt',  price: 45  },
+    ],
+  },
+  {
+    id: 'havan',
+    type: 'karma',
+    emoji: '🔥',
+    name: 'Havan & Yagya',
+    nameNe: 'हवन यज्ञ',
+    desc: 'Complete havan samagri for health, prosperity, or any occasion.',
+    items: [
+      { id: 'hav-01',  name: 'Havan Kund (Medium)',             nameNe: 'हवन कुण्ड',             qty: 1,  unit: 'pcs',  price: 850 },
+      { id: 'hav-02',  name: 'Havan Samagri (1kg)',             nameNe: 'हवन सामग्री',           qty: 2,  unit: 'kg',   price: 320 },
+      { id: 'hav-03',  name: 'Ghee (500ml)',                    nameNe: 'घिउ',                  qty: 1,  unit: 'jar',  price: 620 },
+      { id: 'hav-04',  name: 'Darbha Grass',                    nameNe: 'दर्भा',                 qty: 2,  unit: 'bunch',price: 60  },
+      { id: 'hav-05',  name: 'Camphor (Kapoor)',                nameNe: 'कपूर',                  qty: 2,  unit: 'pkt',  price: 45  },
+      { id: 'hav-06',  name: 'Black Sesame Seeds',              nameNe: 'तिल',                  qty: 1,  unit: 'pkt',  price: 40  },
+      { id: 'hav-07',  name: 'Copper Kalash',                   nameNe: 'तामाको कलश',           qty: 1,  unit: 'pcs',  price: 350 },
+      { id: 'hav-08',  name: 'Coconut',                         nameNe: 'नरिवल',                qty: 3,  unit: 'pcs',  price: 80  },
+    ],
+  },
 ];
 
 const TYPE_LABELS = { festival: '🎪 Festival', karma: '🕉️ Karma Kanda' };
 
-export default function OrderPage() {
-  const [filter, setFilter]       = useState('all');
-  const [selected, setSelected]   = useState(null); // puja being ordered
-  const [form, setForm]           = useState({ name: '', phone: '', location: '', date: '', note: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [error, setError]         = useState('');
+export default function PujaOrderPage() {
+  const { addToCart } = useCart();
+  const router = useRouter();
+  const [filter, setFilter] = useState('all');
+  const [selected, setSelected] = useState(null);
+  const [added, setAdded] = useState(null); // puja id just added → success flash
 
-  const filtered = filter === 'all' ? PUJAS : PUJAS.filter(p => p.type === filter);
+  const filtered = filter === 'all' ? PUJA_SAMAGRI : PUJA_SAMAGRI.filter(p => p.type === filter);
+  const total = (puja) => puja.items.reduce((s, it) => s + it.price * it.qty, 0);
 
-  const openModal = useCallback((puja) => {
-    setSelected(puja);
-    setForm({ name: '', phone: '', location: '', date: '', note: '' });
-    setSuccess(false);
-    setError('');
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setSelected(null);
-    setSuccess(false);
-    setError('');
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.location.trim() || !form.date) {
-      setError('Please fill in all required fields.');
-      return;
-    }
-    setSubmitting(true);
-    setError('');
-    try {
-      const res = await fetch('/api/puja-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          puja_id:    selected.id,
-          puja_name:  selected.name,
-          puja_name_ne: selected.nameNe,
-          name:       form.name.trim(),
-          phone:      form.phone.trim(),
-          location:   form.location.trim(),
-          date:       form.date,
-          note:       form.note.trim(),
-        }),
+  const handleAddToCart = useCallback((puja) => {
+    puja.items.forEach(item => {
+      addToCart({
+        id: item.id,
+        name: `${item.name} — ${puja.name}`,
+        price: item.price,
+        quantity: item.qty,
+        category: puja.nameNe,
+        image: null,
       });
-      if (!res.ok) throw new Error('Server error');
-      setSuccess(true);
-    } catch {
-      setError('Failed to submit order. Please try again or call us directly.');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [form, selected]);
+    });
+    setAdded(puja.id);
+    setSelected(null);
+    setTimeout(() => setAdded(null), 3000);
+  }, [addToCart]);
 
   return (
     <>
@@ -98,76 +247,75 @@ export default function OrderPage() {
         :root {
           --gold: #facc15;
           --orange: #f97316;
+          --green: #22c55e;
           --bg: #080d18;
-          --surface: #0f172a;
+          --surface: #0c1220;
           --surface2: #111827;
-          --border: #1e293b;
-          --muted: #64748b;
+          --border: #1a2540;
+          --border2: #1e293b;
+          --muted: #475569;
           --text: #f1f5f9;
         }
 
-        @keyframes fadeUp {
-          from { opacity:0; transform:translateY(24px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        @keyframes shimmer {
-          0%   { background-position:-200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes overlayIn {
-          from { opacity:0; }
-          to   { opacity:1; }
-        }
-        @keyframes modalIn {
-          from { opacity:0; transform:translateY(32px) scale(0.96); }
-          to   { opacity:1; transform:translateY(0)   scale(1); }
-        }
-        @keyframes rotateSlow {
-          from { transform:rotate(0deg); }
-          to   { transform:rotate(360deg); }
-        }
-        @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes shimmer  { 0%,100% { background-position:-200% center; } 50% { background-position:200% center; } }
+        @keyframes rotateSlow { to { transform:rotate(360deg); } }
+        @keyframes overlayIn  { from { opacity:0; } to { opacity:1; } }
+        @keyframes modalIn    { from { opacity:0; transform:translateY(28px) scale(0.97); } to { opacity:1; transform:none; } }
+        @keyframes toastIn    { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+        @keyframes itemStagger { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:none; } }
 
-        .order-page {
+        .op-page {
           font-family: 'DM Sans', sans-serif;
           background: var(--bg);
           color: var(--text);
           min-height: 100vh;
-          padding: 56px 24px 80px;
+          padding: 56px 24px 100px;
+          position: relative;
         }
 
-        /* Hero header */
+        /* ── Hero ───────────────────────────────────── */
         .hero {
           text-align: center;
           margin-bottom: 52px;
+          animation: fadeUp 0.5s ease both;
           position: relative;
-          animation: fadeUp 0.6s ease both;
         }
         .hero-ring {
           position: absolute;
-          width: 420px; height: 420px;
+          width: 480px; height: 480px;
           border-radius: 50%;
-          border: 1px solid rgba(250,204,21,0.07);
+          border: 1px solid rgba(250,204,21,0.06);
           top: 50%; left: 50%;
-          transform: translate(-50%,-50%);
-          animation: rotateSlow 40s linear infinite;
+          transform: translate(-50%,-56%);
+          animation: rotateSlow 50s linear infinite;
+          pointer-events: none;
+        }
+        .hero-ring2 {
+          position: absolute;
+          width: 320px; height: 320px;
+          border-radius: 50%;
+          border: 1px dashed rgba(250,204,21,0.04);
+          top: 50%; left: 50%;
+          transform: translate(-50%,-56%);
+          animation: rotateSlow 30s linear infinite reverse;
           pointer-events: none;
         }
         .eyebrow {
           display: inline-flex; align-items: center; gap: 8px;
-          background: rgba(250,204,21,0.1);
-          border: 1px solid rgba(250,204,21,0.2);
+          background: rgba(250,204,21,0.08);
+          border: 1px solid rgba(250,204,21,0.18);
           border-radius: 999px;
-          padding: 6px 18px;
+          padding: 6px 20px;
           font-size: 11px; font-weight: 800;
           color: var(--gold); letter-spacing: 2px;
-          text-transform: uppercase; margin-bottom: 18px;
+          text-transform: uppercase; margin-bottom: 20px;
         }
         .hero-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(38px, 6vw, 68px);
-          font-weight: 700; line-height: 1.05;
-          color: var(--text); margin: 0 0 12px;
+          font-size: clamp(36px, 5.5vw, 62px);
+          font-weight: 700; line-height: 1.08;
+          color: var(--text); margin: 0 0 14px;
         }
         .hero-title em {
           font-style: italic;
@@ -176,211 +324,255 @@ export default function OrderPage() {
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          animation: shimmer 4s linear infinite;
+          animation: shimmer 5s linear infinite;
         }
         .hero-sub {
-          color: var(--muted); font-size: 15px; margin: 0 auto;
-          max-width: 520px; line-height: 1.7;
+          color: var(--muted); font-size: 15px;
+          max-width: 500px; margin: 0 auto; line-height: 1.7;
         }
 
-        /* Filter tabs */
-        .filter-tabs {
-          display: flex; justify-content: center; gap: 10px;
-          margin-bottom: 44px; flex-wrap: wrap;
-        }
-        .tab-btn {
-          padding: 10px 24px; border-radius: 999px;
-          border: 1px solid var(--border);
-          background: var(--surface2);
-          color: var(--muted);
-          font-size: 13px; font-weight: 700;
+        /* ── Cart pill ──────────────────────────────── */
+        .cart-pill {
+          display: flex; align-items: center; gap: 8px;
+          position: fixed; bottom: 28px; right: 28px; z-index: 100;
+          background: rgba(34,197,94,0.12);
+          border: 1px solid rgba(34,197,94,0.3);
+          color: var(--green); font-weight: 800; font-size: 14px;
+          padding: 14px 22px; border-radius: 999px;
           cursor: pointer; transition: all 0.2s;
           font-family: 'DM Sans', sans-serif;
+          backdrop-filter: blur(12px);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(34,197,94,0.08);
         }
-        .tab-btn:hover { border-color: rgba(250,204,21,0.3); color: #94a3b8; }
+        .cart-pill:hover {
+          background: rgba(34,197,94,0.2);
+          border-color: rgba(34,197,94,0.45);
+          transform: translateY(-2px);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(34,197,94,0.12);
+        }
+        .cart-pill:active { transform: scale(0.97); }
+        .cart-badge {
+          background: var(--green); color: #0f172a;
+          font-size: 10px; font-weight: 900;
+          min-width: 20px; height: 20px; border-radius: 999px;
+          display: inline-flex; align-items: center; justify-content: center; padding: 0 5px;
+        }
+
+        /* ── Filter tabs ────────────────────────────── */
+        .filter-tabs {
+          display: flex; justify-content: center; gap: 10px;
+          margin-bottom: 48px; flex-wrap: wrap;
+        }
+        .tab-btn {
+          padding: 10px 22px; border-radius: 999px;
+          border: 1px solid var(--border2);
+          background: var(--surface2); color: var(--muted);
+          font-size: 13px; font-weight: 700; cursor: pointer;
+          transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .tab-btn:hover { border-color: rgba(250,204,21,0.25); color: #94a3b8; }
         .tab-btn.active {
-          background: rgba(250,204,21,0.1);
-          border-color: rgba(250,204,21,0.35);
+          background: rgba(250,204,21,0.08);
+          border-color: rgba(250,204,21,0.3);
           color: var(--gold);
         }
 
-        /* Section label */
+        /* ── Section label ──────────────────────────── */
         .section-label {
-          font-size: 11px; font-weight: 800;
-          letter-spacing: 3px; color: var(--gold);
-          text-transform: uppercase;
-          margin: 0 0 20px 2px;
+          font-size: 10px; font-weight: 800; letter-spacing: 3px;
+          color: var(--gold); text-transform: uppercase;
+          margin: 0 0 18px 2px;
         }
+        .section-divider { border: none; border-top: 1px solid var(--border); margin: 36px 0 28px; }
 
-        /* Grid */
+        /* ── Grid ───────────────────────────────────── */
         .pujas-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+          gap: 18px;
           max-width: 1300px; margin: 0 auto;
         }
 
-        /* Card */
-        @keyframes cardIn {
-          from { opacity:0; transform:translateY(20px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
+        /* ── Puja Card ──────────────────────────────── */
+        @keyframes cardIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
         .puja-card {
-          background: linear-gradient(145deg, #111827, #0f172a);
+          background: var(--surface);
           border: 1px solid var(--border);
-          border-radius: 22px;
-          padding: 28px 24px 22px;
-          cursor: pointer;
+          border-radius: 22px; padding: 26px 22px 20px;
+          cursor: pointer; position: relative; overflow: hidden;
           transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
           animation: cardIn 0.4s ease both;
-          position: relative;
-          overflow: hidden;
         }
         .puja-card::before {
           content: '';
           position: absolute; top: 0; right: 0;
-          width: 100px; height: 100px;
-          background: radial-gradient(circle, rgba(250,204,21,0.05), transparent 70%);
+          width: 80px; height: 80px;
+          background: radial-gradient(circle, rgba(250,204,21,0.06), transparent 70%);
           pointer-events: none;
         }
         .puja-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(250,204,21,0.1);
-          border-color: rgba(250,204,21,0.25);
+          transform: translateY(-5px);
+          box-shadow: 0 16px 44px rgba(0,0,0,0.45), 0 0 0 1px rgba(250,204,21,0.12);
+          border-color: rgba(250,204,21,0.2);
         }
-        .card-type-badge {
+        .type-badge {
           display: inline-flex; align-items: center; gap: 4px;
-          font-size: 9px; font-weight: 800;
-          letter-spacing: 1.5px; text-transform: uppercase;
-          padding: 3px 10px; border-radius: 999px;
+          font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+          text-transform: uppercase; padding: 3px 10px; border-radius: 999px;
           margin-bottom: 16px;
         }
-        .card-type-badge.festival {
-          background: rgba(249,115,22,0.12);
-          border: 1px solid rgba(249,115,22,0.25);
-          color: #f97316;
-        }
-        .card-type-badge.karma {
-          background: rgba(250,204,21,0.1);
-          border: 1px solid rgba(250,204,21,0.22);
-          color: var(--gold);
-        }
-        .card-emoji {
-          font-size: 44px; margin-bottom: 14px;
-          display: block; line-height: 1;
-        }
+        .type-badge.festival { background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); color: var(--orange); }
+        .type-badge.karma    { background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2); color: var(--gold); }
+
+        .card-emoji { font-size: 42px; display: block; margin-bottom: 12px; line-height: 1; }
         .card-name {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 22px; font-weight: 700;
-          color: var(--text); margin: 0 0 3px; line-height: 1.2;
+          font-size: 21px; font-weight: 700; color: var(--text);
+          margin: 0 0 2px; line-height: 1.2;
         }
-        .card-name-ne {
-          font-size: 13px; color: var(--gold);
-          font-style: italic; margin: 0 0 12px;
-        }
-        .card-desc {
-          font-size: 12px; color: var(--muted);
-          line-height: 1.65; margin: 0 0 18px;
-        }
-        .card-meta {
-          display: flex; gap: 10px; flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-        .meta-pill {
-          font-size: 11px; font-weight: 700;
-          padding: 4px 10px; border-radius: 8px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid var(--border);
-          color: #475569;
-        }
-        .meta-pill.price { color: var(--gold); border-color: rgba(250,204,21,0.15); background: rgba(250,204,21,0.06); }
-        .book-btn {
-          width: 100%; padding: 12px;
-          background: linear-gradient(135deg, #854d0e, #facc15);
-          color: #0f172a; font-weight: 900; font-size: 13px;
-          border: none; border-radius: 12px; cursor: pointer;
-          transition: transform 0.2s, box-shadow 0.2s;
-          font-family: 'DM Sans', sans-serif;
-          letter-spacing: 0.3px;
-        }
-        .book-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(250,204,21,0.3);
-        }
-        .book-btn:active { transform: scale(0.98); }
+        .card-name-ne { font-size: 12px; color: var(--gold); font-style: italic; margin: 0 0 10px; }
+        .card-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0 0 16px; }
 
-        /* Modal overlay */
+        .card-footer {
+          display: flex; align-items: center; justify-content: space-between;
+          padding-top: 14px; border-top: 1px solid var(--border);
+          gap: 12px;
+        }
+        .card-total {
+          display: flex; flex-direction: column;
+        }
+        .total-label { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+        .total-price { font-size: 18px; font-weight: 800; color: var(--gold); font-family: 'DM Sans', sans-serif; }
+        .total-items { font-size: 10px; color: #334155; font-weight: 600; margin-top: 1px; }
+
+        .view-btn {
+          padding: 10px 18px;
+          background: rgba(250,204,21,0.1);
+          border: 1px solid rgba(250,204,21,0.22);
+          color: var(--gold); font-weight: 800; font-size: 12px;
+          border-radius: 12px; cursor: pointer;
+          transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+          white-space: nowrap;
+        }
+        .view-btn:hover { background: rgba(250,204,21,0.18); transform: translateY(-1px); }
+
+        /* ── Toast ──────────────────────────────────── */
+        .toast {
+          position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+          background: rgba(22,163,74,0.15);
+          border: 1px solid rgba(34,197,94,0.3);
+          color: #4ade80; font-weight: 800; font-size: 14px;
+          padding: 14px 28px; border-radius: 16px; z-index: 200;
+          animation: toastIn 0.3s ease both;
+          backdrop-filter: blur(12px);
+          white-space: nowrap;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        /* ── Modal Overlay ──────────────────────────── */
         .overlay {
-          position: fixed; inset: 0; z-index: 999;
-          background: rgba(0,0,0,0.8);
+          position: fixed; inset: 0; z-index: 150;
+          background: rgba(0,0,0,0.82);
           backdrop-filter: blur(6px);
           display: flex; align-items: center; justify-content: center;
           padding: 20px;
-          animation: overlayIn 0.25s ease both;
+          animation: overlayIn 0.2s ease both;
         }
         .modal {
-          background: #0f172a;
-          border: 1px solid rgba(250,204,21,0.2);
+          background: #0c1220;
+          border: 1px solid rgba(250,204,21,0.18);
           border-radius: 24px;
-          width: 100%; max-width: 520px;
-          max-height: 90vh; overflow-y: auto;
-          padding: 36px 32px;
+          width: 100%; max-width: 560px;
+          max-height: 88vh; overflow-y: auto;
+          padding: 32px 30px;
           box-shadow: 0 40px 100px rgba(0,0,0,0.7);
-          animation: modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+          animation: modalIn 0.3s cubic-bezier(0.34,1.4,0.64,1) both;
           scrollbar-width: thin;
-          scrollbar-color: rgba(250,204,21,0.2) transparent;
+          scrollbar-color: rgba(250,204,21,0.15) transparent;
           position: relative;
         }
+        .modal::-webkit-scrollbar { width: 4px; }
+        .modal::-webkit-scrollbar-thumb { background: rgba(250,204,21,0.15); border-radius: 4px; }
+
         .modal-close {
-          position: absolute; top: 16px; right: 20px;
-          background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-          color: var(--muted); font-size: 16px;
-          width: 32px; height: 32px; border-radius: 50%;
-          cursor: pointer; display: flex; align-items: center; justify-content: center;
+          position: absolute; top: 16px; right: 16px;
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(255,255,255,0.05); border: 1px solid var(--border2);
+          color: var(--muted); font-size: 14px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
           transition: all 0.2s; font-family: inherit;
         }
-        .modal-close:hover { background: rgba(255,255,255,0.12); color: var(--text); }
-        .modal-puja-name {
+        .modal-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+        /* Modal header */
+        .modal-head {
+          display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+        }
+        .modal-emoji { font-size: 40px; }
+        .modal-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 26px; font-weight: 700;
-          color: var(--text); margin: 0 0 4px;
+          font-size: 26px; font-weight: 700; color: var(--text); margin: 0 0 2px;
         }
-        .modal-puja-ne {
-          color: var(--gold); font-style: italic;
-          font-size: 13px; margin: 0 0 24px;
+        .modal-ne { font-size: 13px; color: var(--gold); font-style: italic; margin: 0; }
+
+        .modal-desc {
+          font-size: 12px; color: #334155; line-height: 1.65;
+          padding: 10px 14px;
+          background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+          border-radius: 10px; margin: 14px 0 22px;
         }
 
-        /* Form */
-        .form-group { margin-bottom: 18px; }
-        .form-label {
-          display: block; font-size: 12px; font-weight: 700;
-          color: #64748b; margin-bottom: 7px;
-          letter-spacing: 0.5px; text-transform: uppercase;
+        /* Item list label */
+        .items-label {
+          font-size: 10px; font-weight: 800; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
         }
-        .form-label span { color: #ef4444; margin-left: 2px; }
-        .form-input, .form-textarea {
-          width: 100%; background: #111827;
-          border: 1px solid var(--border); border-radius: 12px;
-          padding: 12px 16px; color: var(--text);
-          font-size: 14px; font-family: 'DM Sans', sans-serif;
-          outline: none; transition: border-color 0.2s;
-          box-sizing: border-box;
-        }
-        .form-input:focus, .form-textarea:focus {
-          border-color: rgba(250,204,21,0.5);
-          box-shadow: 0 0 0 3px rgba(250,204,21,0.08);
-        }
-        .form-input::placeholder, .form-textarea::placeholder { color: #334155; }
-        .form-textarea { resize: vertical; min-height: 80px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } .modal { padding: 24px 20px; } }
 
-        .error-msg {
-          color: #ef4444; font-size: 12px; font-weight: 600;
-          background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-          border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+        /* Items table */
+        .items-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+
+        .item-row {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 14px;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          animation: itemStagger 0.3s ease both;
         }
-        .submit-btn {
+        .item-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          background: var(--gold); opacity: 0.5; flex-shrink: 0;
+        }
+        .item-name-block { flex: 1; min-width: 0; }
+        .item-name { font-size: 13px; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
+        .item-name-ne { font-size: 11px; color: var(--muted); font-style: italic; }
+        .item-qty {
+          font-size: 11px; font-weight: 700; color: #334155;
+          background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+          padding: 2px 8px; border-radius: 6px; white-space: nowrap;
+        }
+        .item-price {
+          font-size: 13px; font-weight: 800; color: var(--gold);
+          text-align: right; min-width: 56px; white-space: nowrap;
+        }
+
+        /* Total row */
+        .total-row {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 16px 18px;
+          background: rgba(250,204,21,0.06);
+          border: 1px solid rgba(250,204,21,0.18);
+          border-radius: 14px; margin-bottom: 16px;
+        }
+        .total-row-label {
+          font-size: 12px; font-weight: 800; letter-spacing: 1px;
+          text-transform: uppercase; color: var(--muted);
+        }
+        .total-row-count { font-size: 11px; color: #334155; margin-top: 2px; }
+        .total-row-price { font-size: 24px; font-weight: 800; color: var(--gold); }
+
+        /* Add to cart btn */
+        .add-cart-btn {
           width: 100%; padding: 16px;
           background: linear-gradient(135deg, #16a34a, #22c55e);
           color: #fff; font-weight: 900; font-size: 15px;
@@ -389,70 +581,51 @@ export default function OrderPage() {
           font-family: 'DM Sans', sans-serif;
           display: flex; align-items: center; justify-content: center; gap: 10px;
         }
-        .submit-btn:hover:not(:disabled) {
+        .add-cart-btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 10px 28px rgba(34,197,94,0.4);
         }
-        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .spinner {
-          width: 18px; height: 18px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-          display: inline-block;
+        .add-cart-btn:active { transform: scale(0.98); }
+
+        .modal-note {
+          color: #1e293b; font-size: 11px; text-align: center;
+          margin-top: 10px; font-weight: 600;
         }
 
-        /* Success */
-        .success-box {
-          text-align: center; padding: 16px 0 8px;
-          animation: fadeUp 0.4s ease both;
-        }
-        .success-emoji { font-size: 64px; margin-bottom: 16px; display: block; }
-        .success-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 28px; font-weight: 700;
-          color: #22c55e; margin: 0 0 8px;
-        }
-        .success-sub { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 24px; }
-        .success-close {
-          display: inline-block; padding: 12px 28px;
-          background: rgba(250,204,21,0.1);
-          border: 1px solid rgba(250,204,21,0.25);
-          color: var(--gold); font-weight: 800; font-size: 14px;
-          border-radius: 12px; cursor: pointer;
-          transition: background 0.2s; font-family: 'DM Sans', sans-serif;
-        }
-        .success-close:hover { background: rgba(250,204,21,0.18); }
-
-        /* Divider */
-        .section-divider {
-          border: none; border-top: 1px solid var(--border);
-          margin: 36px 0 28px; max-width: 1300px;
+        @media (max-width: 480px) {
+          .modal { padding: 24px 18px; }
+          .item-row { padding: 8px 10px; gap: 8px; }
         }
       `}</style>
 
-      <main className="order-page">
+      <main className="op-page">
+
+        {/* Fixed cart pill */}
+        <div className="cart-pill" onClick={() => router.push('/checkout')}>
+          🛒 <span>View Cart</span>
+        </div>
 
         {/* Hero */}
         <div className="hero">
           <div className="hero-ring" />
-          <div className="eyebrow">🕉️ Pandit Puskar Raj Neupane</div>
+          <div className="hero-ring2" />
+          <div className="eyebrow">🕉️ पूजा सामग्री</div>
           <h1 className="hero-title">
-            Book a <em>Puja</em><br />or Karma Kanda
+            Order <em>Puja</em> Samagri<br />by Ritual
           </h1>
           <p className="hero-sub">
-            Select your ceremony below. Panditji will come to your home with all required materials.
-            Same-week availability across Kathmandu Valley.
+            Select your puja or karma kanda — all required items are bundled and added to your cart instantly.
           </p>
         </div>
 
         {/* Filter tabs */}
         <div className="filter-tabs">
-          {[['all','🙏 All Pujas'],['festival','🎪 Festivals'],['karma','🕉️ Karma Kanda']].map(([val, label]) => (
-            <button key={val} className={`tab-btn${filter === val ? ' active' : ''}`} onClick={() => setFilter(val)}>
-              {label}
-            </button>
+          {[['all','🙏 All'], ['festival','🎪 Festivals'], ['karma','🕉️ Karma Kanda']].map(([val, label]) => (
+            <button
+              key={val}
+              className={`tab-btn${filter === val ? ' active' : ''}`}
+              onClick={() => setFilter(val)}
+            >{label}</button>
           ))}
         </div>
 
@@ -460,10 +633,10 @@ export default function OrderPage() {
         <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           {(filter === 'all' || filter === 'festival') && (
             <>
-              {filter === 'all' && <p className="section-label">🎪 Festivals & Parva</p>}
-              <div className="pujas-grid" style={{ marginBottom: filter === 'all' ? 0 : 0 }}>
-                {PUJAS.filter(p => p.type === 'festival').map((puja, i) => (
-                  <PujaCard key={puja.id} puja={puja} delay={i * 0.06} onBook={openModal} />
+              {filter === 'all' && <p className="section-label">🎪 Festivals &amp; Parva</p>}
+              <div className="pujas-grid">
+                {PUJA_SAMAGRI.filter(p => p.type === 'festival').map((puja, i) => (
+                  <PujaCard key={puja.id} puja={puja} delay={i * 0.05} total={total(puja)} onView={() => setSelected(puja)} />
                 ))}
               </div>
             </>
@@ -473,149 +646,99 @@ export default function OrderPage() {
 
           {(filter === 'all' || filter === 'karma') && (
             <>
-              {filter === 'all' && <p className="section-label">🕉️ Karma Kanda & Sanskar</p>}
+              {filter === 'all' && <p className="section-label">🕉️ Karma Kanda &amp; Sanskar</p>}
               <div className="pujas-grid">
-                {PUJAS.filter(p => p.type === 'karma').map((puja, i) => (
-                  <PujaCard key={puja.id} puja={puja} delay={i * 0.06} onBook={openModal} />
+                {PUJA_SAMAGRI.filter(p => p.type === 'karma').map((puja, i) => (
+                  <PujaCard key={puja.id} puja={puja} delay={i * 0.05} total={total(puja)} onView={() => setSelected(puja)} />
                 ))}
               </div>
             </>
           )}
         </div>
-
-        {/* Contact strip */}
-        <div style={{
-          maxWidth: '1300px', margin: '56px auto 0',
-          background: 'linear-gradient(135deg, #1e1a0e, #27200a)',
-          border: '1px solid #78350f', borderRadius: '20px',
-          padding: '28px 32px',
-          display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap',
-        }}>
-          <span style={{ fontSize: '36px' }}>📞</span>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <p style={{ color: '#fef9c3', fontWeight: 800, fontSize: '15px', margin: '0 0 4px' }}>
-              Want to discuss before booking?
-            </p>
-            <p style={{ color: '#92400e', fontSize: '13px', margin: 0 }}>
-              Call Panditji directly — ९८४९३५००८८ &bull; Available 6 AM – 9 PM
-            </p>
-          </div>
-          <a href="tel:9849350088" style={{
-            background: 'linear-gradient(90deg, #facc15, #f97316)',
-            color: '#0f172a', fontWeight: 900, fontSize: '13px',
-            padding: '12px 24px', borderRadius: '12px',
-            textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
-          }}>
-            📞 Call Now
-          </a>
-        </div>
       </main>
 
-      {/* BOOKING MODAL */}
+      {/* Modal */}
       {selected && (
-        <div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+        <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setSelected(null); }}>
           <div className="modal">
-            <button className="modal-close" onClick={closeModal}>✕</button>
+            <button className="modal-close" onClick={() => setSelected(null)}>✕</button>
 
-            {success ? (
-              <div className="success-box">
-                <span className="success-emoji">🙏</span>
-                <h2 className="success-title">Order Received!</h2>
-                <p className="success-sub">
-                  Your booking for <strong style={{ color: '#facc15' }}>{selected.name}</strong> has been submitted.<br />
-                  Panditji will call you within 2 hours to confirm.
-                </p>
-                <button className="success-close" onClick={closeModal}>← Browse More Pujas</button>
+            <div className="modal-head">
+              <span className="modal-emoji">{selected.emoji}</span>
+              <div>
+                <h2 className="modal-title">{selected.name}</h2>
+                <p className="modal-ne">{selected.nameNe}</p>
               </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '36px' }}>{selected.emoji}</span>
-                  <div>
-                    <h2 className="modal-puja-name">{selected.name}</h2>
-                    <p className="modal-puja-ne">{selected.nameNe} &bull; {selected.price}</p>
+            </div>
+
+            <p className="modal-desc">{selected.desc}</p>
+
+            <p className="items-label">Required Samagri — {selected.items.length} items</p>
+
+            <div className="items-list">
+              {selected.items.map((item, i) => (
+                <div key={item.id} className="item-row" style={{ animationDelay: `${i * 0.04}s` }}>
+                  <div className="item-dot" />
+                  <div className="item-name-block">
+                    <div className="item-name">{item.name}</div>
+                    <div className="item-name-ne">{item.nameNe}</div>
                   </div>
+                  <span className="item-qty">{item.qty} {item.unit}</span>
+                  <span className="item-price">₹{(item.price * item.qty).toLocaleString()}</span>
                 </div>
+              ))}
+            </div>
 
-                <p style={{ color: '#475569', fontSize: '13px', marginBottom: '24px', lineHeight: 1.6,
-                  padding: '12px 14px', background: 'rgba(255,255,255,0.03)',
-                  borderRadius: '10px', border: '1px solid var(--border)' }}>
-                  {selected.desc}
-                </p>
+            <div className="total-row">
+              <div>
+                <div className="total-row-label">Kit Total</div>
+                <div className="total-row-count">{selected.items.length} items included</div>
+              </div>
+              <div className="total-row-price">
+                ₹{selected.items.reduce((s, it) => s + it.price * it.qty, 0).toLocaleString()}
+              </div>
+            </div>
 
-                {error && <p className="error-msg">⚠️ {error}</p>}
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Your Name <span>*</span></label>
-                    <input className="form-input" placeholder="Eg. Ram Bahadur Shrestha"
-                      value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Phone Number <span>*</span></label>
-                    <input className="form-input" placeholder="98XXXXXXXX" type="tel"
-                      value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Full Address / Location <span>*</span></label>
-                  <input className="form-input" placeholder="Eg. Thimi-6, Bhaktapur near school"
-                    value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Preferred Date <span>*</span></label>
-                  <input className="form-input" type="date"
-                    min={new Date().toISOString().split('T')[0]}
-                    value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                    style={{ colorScheme: 'dark' }} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Additional Notes (optional)</label>
-                  <textarea className="form-textarea"
-                    placeholder="Any special requirements, auspicious time (muhurat), family size, etc."
-                    value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
-                </div>
-
-                <button className="submit-btn" onClick={handleSubmit} disabled={submitting}>
-                  {submitting
-                    ? <><span className="spinner" /> Submitting…</>
-                    : <>🙏 Confirm Puja Booking</>
-                  }
-                </button>
-
-                <p style={{ color: '#334155', fontSize: '11px', textAlign: 'center', marginTop: '12px' }}>
-                  Panditji will call you within 2 hours to confirm &bull; No advance payment required
-                </p>
-              </>
-            )}
+            <button className="add-cart-btn" onClick={() => handleAddToCart(selected)}>
+              🛒 Add All Items to Cart
+            </button>
+            <p className="modal-note">All items delivered together · Free delivery above ₹499</p>
           </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {added && (
+        <div className="toast">
+          ✅ {PUJA_SAMAGRI.find(p => p.id === added)?.name} samagri added to cart!
         </div>
       )}
     </>
   );
 }
 
-function PujaCard({ puja, delay, onBook }) {
+function PujaCard({ puja, delay, total, onView }) {
   return (
-    <div className="puja-card" style={{ animationDelay: `${delay}s` }}
-      onClick={() => onBook(puja)}>
-      <span className={`card-type-badge ${puja.type}`}>
-        {TYPE_LABELS[puja.type]}
-      </span>
+    <div
+      className="puja-card"
+      style={{ animationDelay: `${delay}s` }}
+      onClick={onView}
+    >
+      <span className={`type-badge ${puja.type}`}>{TYPE_LABELS[puja.type]}</span>
       <span className="card-emoji">{puja.emoji}</span>
       <h3 className="card-name">{puja.name}</h3>
       <p className="card-name-ne">{puja.nameNe}</p>
       <p className="card-desc">{puja.desc}</p>
-      <div className="card-meta">
-        <span className="meta-pill">⏱ {puja.duration}</span>
-        <span className="meta-pill price">💰 {puja.price}</span>
+      <div className="card-footer">
+        <div className="card-total">
+          <span className="total-label">Kit Price</span>
+          <span className="total-price">₹{total.toLocaleString()}</span>
+          <span className="total-items">{puja.items.length} items</span>
+        </div>
+        <button className="view-btn" onClick={e => { e.stopPropagation(); onView(); }}>
+          View Kit →
+        </button>
       </div>
-      <button className="book-btn" onClick={(e) => { e.stopPropagation(); onBook(puja); }}>
-        🙏 Book This Puja
-      </button>
     </div>
   );
 }

@@ -1,41 +1,258 @@
 'use client';
 // app/policies/privacy/page.js
-// ✅ Self-contained — no external component imports needed
 
 import Link from 'next/link';
 
 function PolicyLayout({ title, emoji, lastUpdated, children }) {
   return (
-    <div style={{ background: '#1c1c1e', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '60px 24px 100px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
-          <Link href="/" style={{ color: '#94a3b8', fontSize: '13px', textDecoration: 'none' }}>Home</Link>
-          <span style={{ color: '#475569' }}>›</span>
-          <Link href="/policies" style={{ color: '#94a3b8', fontSize: '13px', textDecoration: 'none' }}>Policies</Link>
-          <span style={{ color: '#475569' }}>›</span>
-          <span style={{ color: '#f1f5f9', fontSize: '13px' }}>{title}</span>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg,#1e293b,#0f172a)', border: '1px solid #334155', borderRadius: '16px', padding: '36px 40px', marginBottom: '40px' }}>
-          <div style={{ fontSize: '40px', marginBottom: '12px' }}>{emoji}</div>
-          <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#f8fafc', margin: 0 }}>{title}</h1>
-          {lastUpdated && <p style={{ color: '#64748b', fontSize: '12px', marginTop: '8px' }}>Last updated: {lastUpdated}</p>}
-        </div>
-        <div style={{ background: '#27272a', border: '1px solid #3f3f46', borderRadius: '16px', padding: '36px 40px' }}>
-          {children}
-        </div>
-        <div style={{ marginTop: '32px', textAlign: 'center' }}>
-          <Link href="/policies" style={{ color: '#facc15', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>← Back to all policies</Link>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;600;800&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        .policy-root {
+          font-family: 'DM Sans', sans-serif;
+          background: #080d18;
+          min-height: 100vh;
+          color: #f1f5f9;
+          position: relative;
+          overflow-x: hidden;
+        }
+
+        /* Atmospheric glow */
+        .policy-root::before {
+          content: '';
+          position: fixed;
+          top: -200px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 800px;
+          height: 500px;
+          background: radial-gradient(ellipse at center, rgba(250,204,21,0.04) 0%, transparent 70%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .policy-inner {
+          position: relative;
+          z-index: 1;
+          max-width: 780px;
+          margin: 0 auto;
+          padding: 52px 24px 100px;
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 40px;
+        }
+        .breadcrumb a {
+          color: #475569;
+          font-size: 12px;
+          font-weight: 600;
+          text-decoration: none;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          transition: color 0.2s;
+        }
+        .breadcrumb a:hover { color: #94a3b8; }
+        .breadcrumb-sep { color: #1e293b; font-size: 14px; }
+        .breadcrumb-current {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        /* Hero card */
+        .policy-hero {
+          position: relative;
+          background: linear-gradient(135deg, #0f172a 0%, #080d18 60%, #0c1220 100%);
+          border: 1px solid #1e2d45;
+          border-radius: 20px;
+          padding: 40px 44px;
+          margin-bottom: 12px;
+          overflow: hidden;
+        }
+        .policy-hero::after {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(250,204,21,0.3), transparent);
+        }
+        .hero-emoji {
+          font-size: 44px;
+          margin-bottom: 16px;
+          display: block;
+          filter: drop-shadow(0 0 20px rgba(250,204,21,0.2));
+        }
+        .hero-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 36px;
+          font-weight: 700;
+          color: #f8fafc;
+          line-height: 1.15;
+          letter-spacing: -0.01em;
+        }
+        .hero-date {
+          margin-top: 10px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #334155;
+        }
+        /* Decorative corner accent */
+        .hero-accent {
+          position: absolute;
+          bottom: -30px;
+          right: -30px;
+          width: 120px;
+          height: 120px;
+          border: 1px solid rgba(250,204,21,0.06);
+          border-radius: 50%;
+        }
+        .hero-accent::before {
+          content: '';
+          position: absolute;
+          inset: 20px;
+          border: 1px solid rgba(250,204,21,0.04);
+          border-radius: 50%;
+        }
+
+        /* Content card */
+        .policy-body {
+          background: #0c1220;
+          border: 1px solid #1a2540;
+          border-radius: 20px;
+          padding: 44px 44px;
+          position: relative;
+          overflow: hidden;
+        }
+        .policy-body::before {
+          content: '';
+          position: absolute;
+          bottom: 0; left: 0; right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(250,204,21,0.08), transparent);
+        }
+
+        /* Section */
+        .section {
+          padding-bottom: 28px;
+          margin-bottom: 28px;
+          border-bottom: 1px solid #0f1a2e;
+        }
+        .section:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+          padding-bottom: 0;
+        }
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+        .section-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #facc15;
+          flex-shrink: 0;
+          box-shadow: 0 0 8px rgba(250,204,21,0.5);
+        }
+        .section-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: #facc15;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        .section-body {
+          color: #64748b;
+          font-size: 14px;
+          line-height: 1.8;
+          padding-left: 16px;
+        }
+
+        /* Back link */
+        .back-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 36px;
+          color: #334155;
+          font-size: 12px;
+          font-weight: 700;
+          text-decoration: none;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          transition: color 0.2s, gap 0.2s;
+        }
+        .back-link:hover {
+          color: #facc15;
+          gap: 12px;
+        }
+        .back-link-arrow {
+          font-size: 16px;
+          transition: transform 0.2s;
+        }
+        .back-link:hover .back-link-arrow {
+          transform: translateX(-3px);
+        }
+      `}</style>
+
+      <div className="policy-root">
+        <div className="policy-inner">
+
+          {/* Breadcrumb */}
+          <nav className="breadcrumb">
+            <Link href="/">Home</Link>
+            <span className="breadcrumb-sep">›</span>
+            <Link href="/policies">Policies</Link>
+            <span className="breadcrumb-sep">›</span>
+            <span className="breadcrumb-current">{title}</span>
+          </nav>
+
+          {/* Hero */}
+          <div className="policy-hero">
+            <span className="hero-emoji">{emoji}</span>
+            <h1 className="hero-title">{title}</h1>
+            {lastUpdated && <p className="hero-date">Last updated — {lastUpdated}</p>}
+            <div className="hero-accent" />
+          </div>
+
+          {/* Body */}
+          <div className="policy-body">
+            {children}
+          </div>
+
+          {/* Back */}
+          <Link href="/policies" className="back-link">
+            <span className="back-link-arrow">←</span>
+            All Policies
+          </Link>
+
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
 function Section({ title, children }) {
   return (
-    <div style={{ marginBottom: '28px' }}>
-      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#facc15', marginBottom: '8px' }}>{title}</h3>
-      <p style={{ color: '#94a3b8', lineHeight: 1.7, fontSize: '14px', margin: 0 }}>{children}</p>
+    <div className="section">
+      <div className="section-header">
+        <div className="section-dot" />
+        <h3 className="section-title">{title}</h3>
+      </div>
+      <p className="section-body">{children}</p>
     </div>
   );
 }

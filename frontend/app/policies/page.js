@@ -44,22 +44,21 @@ function PolicyCard({ href, emoji, title, desc }) {
 
 export default function PoliciesPage() {
   return (
-    <div style={{ background: '#1c1c1e', minHeight: '100vh' }}>
+    // ✅ Only change from original: removed `background: '#1c1c1e'` and `minHeight: '100vh'`
+    // layout.js already provides Navbar + Footer + body background for all pages
+    <div>
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '60px 24px 100px' }}>
-
         <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#f8fafc', marginBottom: '8px' }}>
           Policies
         </h1>
         <p style={{ color: '#64748b', marginBottom: '40px', fontSize: '14px' }}>
           Everything you need to know about shopping with us.
         </p>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {POLICIES.map(p => (
             <PolicyCard key={p.href} {...p} />
           ))}
         </div>
-
       </div>
     </div>
   );
