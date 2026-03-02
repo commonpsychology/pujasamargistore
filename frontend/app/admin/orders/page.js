@@ -1,9 +1,9 @@
 'use client';
 // app/admin/orders/page.js
-// Shows all puja samagri kit orders + cheena birth chart orders
-// No site header — standalone admin view
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+
+const ADMIN_PASSWORD = 'pushkar2025'; // ← change this to your password
 
 const STATUS_COLORS = {
   pending:   { bg: 'rgba(250,204,21,0.1)',  border: 'rgba(250,204,21,0.25)',  text: '#facc15' },
@@ -21,7 +21,172 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// ─── Password Gate ────────────────────────────────────────────
+function PasswordGate({ onUnlock }) {
+  const [pwd, setPwd]       = useState('');
+  const [shake, setShake]   = useState(false);
+  const [attempts, setAttempts] = useState(0);
+
+  const handleSubmit = () => {
+    if (pwd === ADMIN_PASSWORD) {
+      sessionStorage.setItem('admin_unlocked', '1');
+      onUnlock();
+    } else {
+      setAttempts(a => a + 1);
+      setShake(true);
+      setPwd('');
+      setTimeout(() => setShake(false), 600);
+    }
+  };
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=DM+Sans:wght@400;600;800&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { background: #080d18; }
+
+        .gate-wrap {
+          font-family: 'DM Sans', sans-serif;
+          background: #080d18;
+          min-height: 100vh;
+          display: flex; align-items: center; justify-content: center;
+          padding: 24px;
+        }
+        .gate-card {
+          background: #0c1220;
+          border: 1px solid #1a2540;
+          border-radius: 20px;
+          padding: 40px 36px;
+          width: 100%; max-width: 380px;
+          text-align: center;
+        }
+        .gate-icon {
+          font-size: 40px; margin-bottom: 16px;
+        }
+        .gate-eyebrow {
+          font-size: 10px; font-weight: 800; letter-spacing: 3px;
+          text-transform: uppercase; color: #facc15; margin-bottom: 8px;
+        }
+        .gate-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 28px; font-weight: 700; color: #f1f5f9;
+          margin-bottom: 6px;
+        }
+        .gate-sub {
+          font-size: 12px; color: #475569; margin-bottom: 28px;
+        }
+        .gate-input-wrap {
+          position: relative; margin-bottom: 12px;
+        }
+        .gate-input {
+          width: 100%;
+          background: #111827; border: 1px solid #1e293b;
+          border-radius: 12px; padding: 13px 44px 13px 16px;
+          color: #f1f5f9; font-size: 15px; font-family: 'DM Sans', sans-serif;
+          outline: none; transition: border-color 0.2s; letter-spacing: 2px;
+        }
+        .gate-input:focus { border-color: rgba(250,204,21,0.4); }
+        .gate-input.error { border-color: rgba(239,68,68,0.5); }
+        .toggle-btn {
+          position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; cursor: pointer;
+          color: #334155; font-size: 16px; padding: 4px;
+          transition: color 0.2s;
+        }
+        .toggle-btn:hover { color: #94a3b8; }
+        .gate-btn {
+          width: 100%;
+          background: rgba(250,204,21,0.1);
+          border: 1px solid rgba(250,204,21,0.25);
+          border-radius: 12px; padding: 13px;
+          color: #facc15; font-size: 13px; font-weight: 800;
+          font-family: 'DM Sans', sans-serif;
+          cursor: pointer; transition: all 0.2s;
+          letter-spacing: 1px; text-transform: uppercase;
+        }
+        .gate-btn:hover {
+          background: rgba(250,204,21,0.15);
+          border-color: rgba(250,204,21,0.4);
+        }
+        .gate-error {
+          font-size: 11px; color: #f87171; font-weight: 700;
+          margin-top: 10px; min-height: 16px;
+        }
+
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          20%      { transform: translateX(-8px); }
+          40%      { transform: translateX(8px); }
+          60%      { transform: translateX(-6px); }
+          80%      { transform: translateX(6px); }
+        }
+        .shake { animation: shake 0.5s ease; }
+      `}</style>
+
+      <div className="gate-wrap">
+        <div className={`gate-card ${shake ? 'shake' : ''}`}>
+          <div className="gate-icon">🔐</div>
+          <p className="gate-eyebrow">Restricted Area</p>
+          <h1 className="gate-title">Admin Access</h1>
+          <p className="gate-sub">Enter your admin password to continue</p>
+
+          <GateForm
+            pwd={pwd}
+            setPwd={setPwd}
+            shake={shake}
+            attempts={attempts}
+            onSubmit={handleSubmit}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function GateForm({ pwd, setPwd, shake, attempts, onSubmit }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <>
+      <div className="gate-input-wrap">
+        <input
+          className={`gate-input${attempts > 0 ? ' error' : ''}`}
+          type={show ? 'text' : 'password'}
+          placeholder="••••••••"
+          value={pwd}
+          onChange={e => setPwd(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && onSubmit()}
+          autoFocus
+        />
+        <button className="toggle-btn" onClick={() => setShow(s => !s)} tabIndex={-1}>
+          {show ? '🙈' : '👁'}
+        </button>
+      </div>
+      <button className="gate-btn" onClick={onSubmit}>
+        Unlock Dashboard →
+      </button>
+      <p className="gate-error">
+        {attempts > 0 ? `Incorrect password${attempts > 2 ? ` (${attempts} attempts)` : ''}` : ''}
+      </p>
+    </>
+  );
+}
+
+// ─── Main Admin Page ──────────────────────────────────────────
 export default function AdminOrdersPage() {
+  const [unlocked, setUnlocked] = useState(
+    () => typeof window !== 'undefined' && sessionStorage.getItem('admin_unlocked') === '1'
+  );
+
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+
+  return <AdminDashboard />;
+}
+
+// ─── Dashboard (only renders after unlock) ───────────────────
+function AdminDashboard() {
   const [data, setData]         = useState({ puja_orders: [], cheena_orders: [] });
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
@@ -62,6 +227,11 @@ export default function AdminOrdersPage() {
         [`${type}_orders`]: prev[`${type}_orders`].map(o => o.id === id ? { ...o, status } : o),
       }));
     } catch { /* silent */ }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_unlocked');
+    window.location.reload();
   };
 
   const allOrders = useMemo(() => {
@@ -115,7 +285,6 @@ export default function AdminOrdersPage() {
           min-height: 100vh; padding: 40px 24px 80px;
         }
 
-        /* Title */
         .page-title-row {
           display: flex; align-items: flex-end; justify-content: space-between;
           margin-bottom: 32px; gap: 16px; flex-wrap: wrap;
@@ -123,6 +292,8 @@ export default function AdminOrdersPage() {
         }
         .page-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
         .page-title { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 700; color: var(--text); line-height: 1.1; }
+
+        .title-actions { display: flex; gap: 8px; align-items: center; }
         .refresh-btn {
           display: flex; align-items: center; gap: 7px;
           background: var(--surface); border: 1px solid var(--border2);
@@ -131,8 +302,15 @@ export default function AdminOrdersPage() {
           transition: all 0.2s; font-family: 'DM Sans', sans-serif;
         }
         .refresh-btn:hover { border-color: rgba(250,204,21,0.25); color: #94a3b8; }
+        .logout-btn {
+          display: flex; align-items: center; gap: 7px;
+          background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15);
+          color: #f87171; font-size: 12px; font-weight: 700;
+          padding: 9px 16px; border-radius: 10px; cursor: pointer;
+          transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .logout-btn:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
 
-        /* Stats */
         .stats-row {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
           gap: 10px; margin-bottom: 28px;
@@ -146,7 +324,6 @@ export default function AdminOrdersPage() {
         .stat-value.orange { color: var(--orange); }
         .stat-value.amber  { color: var(--amber); }
 
-        /* Controls */
         .controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; animation: fadeUp 0.4s 0.1s ease both; }
         .search-input {
           flex: 1; min-width: 200px;
@@ -165,7 +342,6 @@ export default function AdminOrdersPage() {
         }
         .filter-select:focus { border-color: rgba(250,204,21,0.35); }
 
-        /* Tabs */
         .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; animation: fadeUp 0.4s 0.12s ease both; }
         .tab-btn {
           padding: 8px 18px; border-radius: 999px;
@@ -178,7 +354,6 @@ export default function AdminOrdersPage() {
 
         .results-label { font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 10px; }
 
-        /* Orders */
         .orders-list { display: flex; flex-direction: column; gap: 10px; }
 
         .order-card {
@@ -219,7 +394,6 @@ export default function AdminOrdersPage() {
         .expand-icon { color: #334155; font-size: 13px; flex-shrink: 0; transition: transform 0.2s; }
         .expand-icon.open { transform: rotate(180deg); }
 
-        /* Detail panel */
         .card-detail {
           border-top: 1px solid var(--border);
           padding: 18px 20px;
@@ -261,7 +435,6 @@ export default function AdminOrdersPage() {
         }
         .order-id { font-size: 11px; color: #1e293b; font-weight: 600; margin-left: auto; }
 
-        /* States */
         .state-box { text-align: center; padding: 60px 20px; color: #334155; font-size: 14px; }
         .state-emoji { font-size: 44px; margin-bottom: 12px; }
         .spinner {
@@ -273,42 +446,27 @@ export default function AdminOrdersPage() {
 
       <div className="admin-page">
 
-        {/* Title row */}
         <div className="page-title-row">
           <div>
             <p className="page-eyebrow">Admin Dashboard</p>
             <h1 className="page-title">Orders</h1>
           </div>
-          <button className="refresh-btn" onClick={load}>↺ Refresh</button>
+          <div className="title-actions">
+            <button className="refresh-btn" onClick={load}>↺ Refresh</button>
+            <button className="logout-btn" onClick={handleLogout}>🔒 Lock</button>
+          </div>
         </div>
 
-        {/* Stats */}
         {!loading && !error && (
           <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-label">Total</div>
-              <div className="stat-value">{stats.total}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Puja Kit</div>
-              <div className="stat-value orange">{stats.puja}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Cheena</div>
-              <div className="stat-value amber">{stats.cheena}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Pending</div>
-              <div className="stat-value gold">{stats.pending}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Confirmed</div>
-              <div className="stat-value green">{stats.confirmed}</div>
-            </div>
+            <div className="stat-card"><div className="stat-label">Total</div><div className="stat-value">{stats.total}</div></div>
+            <div className="stat-card"><div className="stat-label">Puja Kit</div><div className="stat-value orange">{stats.puja}</div></div>
+            <div className="stat-card"><div className="stat-label">Cheena</div><div className="stat-value amber">{stats.cheena}</div></div>
+            <div className="stat-card"><div className="stat-label">Pending</div><div className="stat-value gold">{stats.pending}</div></div>
+            <div className="stat-card"><div className="stat-label">Confirmed</div><div className="stat-value green">{stats.confirmed}</div></div>
           </div>
         )}
 
-        {/* Controls */}
         <div className="controls">
           <input
             className="search-input"
@@ -325,7 +483,6 @@ export default function AdminOrdersPage() {
           </select>
         </div>
 
-        {/* Tabs */}
         <div className="tabs">
           {[['all','🙏 All'], ['puja','🪔 Puja Samagri'], ['cheena','✨ Cheena']].map(([val, label]) => (
             <button key={val} className={`tab-btn${tab === val ? ' active' : ''}`} onClick={() => setTab(val)}>
@@ -344,7 +501,6 @@ export default function AdminOrdersPage() {
           <div className="state-box"><div className="state-emoji">📭</div>No orders found.</div>
         )}
 
-        {/* Order cards */}
         {!loading && !error && (
           <div className="orders-list">
             {filtered.map((order, i) => {

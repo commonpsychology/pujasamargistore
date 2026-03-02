@@ -327,7 +327,41 @@ export default function CheenaPage() {
               value={form.message}
               onChange={e => setField('message', e.target.value)}
             />
-
+{/* Delivery note */}
+<div style={{
+  margin: '24px 0 0',
+  padding: '16px 20px',
+  background: 'rgba(250,204,21,0.05)',
+  border: '1px solid rgba(250,204,21,0.15)',
+  borderRadius: '14px',
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '12px',
+}}>
+  <span style={{ fontSize: '28px', flexShrink: 0, marginTop: '2px' }}>🪔</span>
+  <div>
+    <p style={{
+      fontFamily: "'Cormorant Garamond', serif",
+      fontSize: '17px',
+      fontWeight: '700',
+      color: '#facc15',
+      marginBottom: '5px',
+      lineHeight: 1.3,
+    }}>
+      ज्योतिष पुष्कर राज न्यौपाने स्वयंले
+      तपाईंको चिना तयार गरी व्यक्तिगत रूपमा प्रदान गर्नुहुनेछ।
+    </p>
+    <p style={{
+      fontSize: '12px',
+      color: '#64748b',
+      margin: 0,
+      lineHeight: 1.7,
+    }}>
+      Jyotish Pushkar Raj Neupane will personally prepare and
+      deliver your Cheena reading — explained in detail, face to face.
+    </p>
+  </div>
+</div>
             <button
               className="submit-btn"
               onClick={handleSubmit}

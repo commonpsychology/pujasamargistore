@@ -52,9 +52,17 @@ export default function Checkout() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to place order');
 
-      // Clear cart then go to payment page
       clearCart();
-      router.push(`/payment?orderId=${data.orderId}&total=${grandTotal}`);
+
+      // Pass all details as query params so payment page can auto-fill
+      const params = new URLSearchParams({
+        orderId:  data.orderId,
+        total:    grandTotal,
+        name:     name,
+        phone:    phone,
+        address:  address,
+      });
+      router.push(`/payment?${params.toString()}`);
     } catch (err) {
       setError(err.message);
       setPlacing(false);
@@ -98,7 +106,6 @@ export default function Checkout() {
           font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif;
         }
 
-        /* Delivery banner */
         .delivery-banner {
           border-radius: 12px; padding: 14px 18px; margin-bottom: 24px;
           font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 12px;
@@ -117,7 +124,6 @@ export default function Checkout() {
           background: linear-gradient(90deg, #facc15, #22c55e); transition: width 0.4s ease;
         }
 
-        /* Cart list */
         .cart-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
         .cart-item {
           display: flex; align-items: center; gap: 16px;
@@ -154,7 +160,6 @@ export default function Checkout() {
         }
         .remove-btn:hover { color: #ef4444; }
 
-        /* Form */
         .form-card {
           background: linear-gradient(145deg, #1e293b, #0f172a);
           border: 1px solid #1e293b; border-radius: 20px; padding: 24px; margin-bottom: 24px;
@@ -177,7 +182,6 @@ export default function Checkout() {
         .form-input:focus { border-color: rgba(250,204,21,0.4); }
         .form-input::placeholder { color: #334155; }
 
-        /* Summary */
         .summary-card {
           background: linear-gradient(145deg, #1e293b, #0f172a);
           border: 1px solid #1e293b; border-radius: 20px; padding: 28px;
@@ -250,7 +254,6 @@ export default function Checkout() {
 
         {isMounted && cart.length > 0 && (
           <>
-            {/* Delivery banner */}
             {deliveryCharge === 0 ? (
               <div className="delivery-banner free">
                 <span>🎉</span>
@@ -270,7 +273,6 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* Cart items */}
             <div className="cart-list">
               {cart.map(({ key, product, qty }) => {
                 const imageSrc = product.image_url ||
@@ -298,7 +300,6 @@ export default function Checkout() {
               })}
             </div>
 
-            {/* Delivery details form */}
             <div className="form-card">
               <p className="form-title">📦 Delivery Details</p>
               <div className="form-row">
@@ -317,7 +318,6 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* Order summary */}
             <div className="summary-card">
               <p className="summary-title">Order Summary</p>
               <div className="summary-row">

@@ -1,13 +1,8 @@
 // app/layout.js
-// ─────────────────────────────────────────────────────────────
-// Root layout — wraps everything in <CartProvider> so useCart()
-// works in Navbar, ProductCard, and any other client component.
-// ─────────────────────────────────────────────────────────────
 
 import './globals.css';
 import { CartProvider } from '../src/context/CartContext';
-import Navbar from '../src/components/Navbar';
-import Footer from '../src/components/Footer';
+import ConditionalShell from '../src/components/ConditionalShell';
 
 export const metadata = {
   title: 'पूजा सामग्री — पण्डित पुष्कर राज न्यौपाने',
@@ -26,17 +21,10 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        {/*
-          CartProvider must be a client boundary.
-          Because it has 'use client' at the top of CartContext.js,
-          this import is safe here in the Server Component layout.
-        */}
         <CartProvider>
-          <Navbar />
-          <main id="main-content" className="flex-1">
+          <ConditionalShell>
             {children}
-          </main>
-          <Footer />
+          </ConditionalShell>
         </CartProvider>
       </body>
     </html>
