@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import Footer from '@/src/components/Footer';
 
 const CHEENA_TYPES = [
   {
@@ -79,17 +81,20 @@ export default function CheenaPage() {
 
   if (submitted) {
     return (
-      <main className="cheena-page success">
-        <div className="success-card">
-          <div className="emoji">🙏</div>
-          <h2>धन्यवाद!</h2>
-          <p>तपाईंको चिनाको अनुरोध सफलतापूर्वक पठाइयो।</p>
-          <p>हामी छिट्टै तपाईंलाई सम्पर्क गर्नेछौं।</p>
-          <button onClick={() => window.location.reload()}>
-            अर्को अनुरोध गर्नुहोस्
-          </button>
-        </div>
-      </main>
+      <>
+        <main className="cheena-page success">
+          <div className="success-card">
+            <div className="emoji">🙏</div>
+            <h2>धन्यवाद!</h2>
+            <p>तपाईंको चिनाको अनुरोध सफलतापूर्वक पठाइयो।</p>
+            <p>हामी छिट्टै तपाईंलाई सम्पर्क गर्नेछौं।</p>
+            <button onClick={() => window.location.reload()}>
+              अर्को अनुरोध गर्नुहोस्
+            </button>
+          </div>
+        </main>
+        <Footer />
+      </>
     );
   }
 
@@ -115,7 +120,7 @@ export default function CheenaPage() {
           font-family: 'DM Sans', sans-serif;
         }
 
-        h1 {
+        .cheena-page h1 {
           text-align: center;
           font-size: clamp(32px,5vw,48px);
           color: var(--gold);
@@ -169,7 +174,7 @@ export default function CheenaPage() {
           margin-bottom: 10px;
         }
 
-        ul {
+        .cheena-page ul {
           padding-left: 18px;
           color: var(--muted);
           font-size: 13px;
@@ -182,17 +187,17 @@ export default function CheenaPage() {
           padding: 32px;
         }
 
-        .grid {
+        .form-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 20px;
         }
 
         @media(max-width:768px){
-          .grid { grid-template-columns: 1fr; }
+          .form-grid { grid-template-columns: 1fr; }
         }
 
-        input, textarea {
+        .cheena-page input, .cheena-page textarea {
           width: 100%;
           padding: 12px 16px;
           border-radius: 12px;
@@ -202,13 +207,13 @@ export default function CheenaPage() {
           font-size: 14px;
         }
 
-        input:focus, textarea:focus {
+        .cheena-page input:focus, .cheena-page textarea:focus {
           outline: none;
           border-color: var(--gold);
           box-shadow: 0 0 0 3px rgba(250,204,21,0.15);
         }
 
-        textarea { resize: none; }
+        .cheena-page textarea { resize: none; }
 
         .submit-btn {
           margin-top: 24px;
@@ -288,7 +293,7 @@ export default function CheenaPage() {
 
           {/* Form */}
           <div className="form-box">
-            <div className="grid">
+            <div className="form-grid">
               <input
                 placeholder="पूरा नाम *"
                 value={form.name}
@@ -327,41 +332,43 @@ export default function CheenaPage() {
               value={form.message}
               onChange={e => setField('message', e.target.value)}
             />
-{/* Delivery note */}
-<div style={{
-  margin: '24px 0 0',
-  padding: '16px 20px',
-  background: 'rgba(250,204,21,0.05)',
-  border: '1px solid rgba(250,204,21,0.15)',
-  borderRadius: '14px',
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: '12px',
-}}>
-  <span style={{ fontSize: '28px', flexShrink: 0, marginTop: '2px' }}>🪔</span>
-  <div>
-    <p style={{
-      fontFamily: "'Cormorant Garamond', serif",
-      fontSize: '17px',
-      fontWeight: '700',
-      color: '#facc15',
-      marginBottom: '5px',
-      lineHeight: 1.3,
-    }}>
-      ज्योतिष पुष्कर राज न्यौपाने स्वयंले
-      तपाईंको चिना तयार गरी व्यक्तिगत रूपमा प्रदान गर्नुहुनेछ।
-    </p>
-    <p style={{
-      fontSize: '12px',
-      color: '#64748b',
-      margin: 0,
-      lineHeight: 1.7,
-    }}>
-      Jyotish Pushkar Raj Neupane will personally prepare and
-      deliver your Cheena reading — explained in detail, face to face.
-    </p>
-  </div>
-</div>
+
+            {/* Delivery note */}
+            <div style={{
+              margin: '24px 0 0',
+              padding: '16px 20px',
+              background: 'rgba(250,204,21,0.05)',
+              border: '1px solid rgba(250,204,21,0.15)',
+              borderRadius: '14px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+            }}>
+              <span style={{ fontSize: '28px', flexShrink: 0, marginTop: '2px' }}>🪔</span>
+              <div>
+                <p style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  color: '#facc15',
+                  marginBottom: '5px',
+                  lineHeight: 1.3,
+                }}>
+                  ज्योतिष पुष्कर राज न्यौपाने स्वयंले
+                  तपाईंको चिना तयार गरी व्यक्तिगत रूपमा प्रदान गर्नुहुनेछ।
+                </p>
+                <p style={{
+                  fontSize: '12px',
+                  color: '#64748b',
+                  margin: 0,
+                  lineHeight: 1.7,
+                }}>
+                  Jyotish Pushkar Raj Neupane will personally prepare and
+                  deliver your Cheena reading — explained in detail, face to face.
+                </p>
+              </div>
+            </div>
+
             <button
               className="submit-btn"
               onClick={handleSubmit}
@@ -373,6 +380,8 @@ export default function CheenaPage() {
 
         </div>
       </main>
+
+     
     </>
   );
-}
+}1

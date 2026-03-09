@@ -11,10 +11,30 @@ export default function Home() {
   return (
     <div style={{ width: '100%' }}>
 
+      {/* ── DEMO LINK (remove when done) ── */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 24px 0' }}>
+        <a
+          href="/payment?orderId=DEMO1234&total=1500&name=Test+User&phone=9800000000&address=Thimi+Bhaktapur"
+          style={{
+            background: 'rgba(250,204,21,0.08)',
+            border: '1px dashed rgba(250,204,21,0.3)',
+            color: '#facc15',
+            padding: '8px 20px',
+            borderRadius: '999px',
+            fontSize: '12px',
+            fontWeight: 700,
+            textDecoration: 'none',
+            letterSpacing: '0.5px',
+          }}
+        >
+          💳 Preview Payment Page →
+        </a>
+      </div>
+
       {/* ── HERO SLIDER ── */}
       <HeroSlider />
 
-            {/* ── FEATURED PRODUCTS ── */}
+      {/* ── FEATURED PRODUCTS ── */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '36px 24px 20px' }}>
         <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#f1f5f9', marginBottom: '20px' }}>
           Featured Products
@@ -40,8 +60,6 @@ export default function Home() {
         padding: '0 24px',
         borderTop: '1px solid #27272a',
       }} />
-
-
 
       {/* ── DIVIDER ── */}
       <div style={{

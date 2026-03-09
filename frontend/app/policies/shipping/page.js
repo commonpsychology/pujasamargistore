@@ -9,30 +9,6 @@ function PolicyLayout({ title, emoji, lastUpdated, children }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;600;800&display=swap');
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        .policy-root {
-          font-family: 'DM Sans', sans-serif;
-          background: #080d18;
-          min-height: 100vh;
-          color: #f1f5f9;
-          position: relative;
-          overflow-x: hidden;
-        }
-
-        .policy-root::before {
-          content: '';
-          position: fixed;
-          top: -200px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 800px;
-          height: 500px;
-          background: radial-gradient(ellipse at center, rgba(250,204,21,0.04) 0%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-        }
-
         .policy-inner {
           position: relative;
           z-index: 1;
@@ -193,32 +169,30 @@ function PolicyLayout({ title, emoji, lastUpdated, children }) {
         .back-link:hover .back-link-arrow { transform: translateX(-3px); }
       `}</style>
 
-      <div className="policy-root">
-        <div className="policy-inner">
-          <nav className="breadcrumb">
-            <Link href="/">Home</Link>
-            <span className="breadcrumb-sep">›</span>
-            <Link href="/policies">Policies</Link>
-            <span className="breadcrumb-sep">›</span>
-            <span className="breadcrumb-current">{title}</span>
-          </nav>
+      <div className="policy-inner">
+        <nav className="breadcrumb">
+          <Link href="/">Home</Link>
+          <span className="breadcrumb-sep">›</span>
+          <Link href="/policies">Policies</Link>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-current">{title}</span>
+        </nav>
 
-          <div className="policy-hero">
-            <span className="hero-emoji">{emoji}</span>
-            <h1 className="hero-title">{title}</h1>
-            {lastUpdated && <p className="hero-date">Last updated — {lastUpdated}</p>}
-            <div className="hero-accent" />
-          </div>
-
-          <div className="policy-body">
-            {children}
-          </div>
-
-          <Link href="/policies" className="back-link">
-            <span className="back-link-arrow">←</span>
-            All Policies
-          </Link>
+        <div className="policy-hero">
+          <span className="hero-emoji">{emoji}</span>
+          <h1 className="hero-title">{title}</h1>
+          {lastUpdated && <p className="hero-date">Last updated — {lastUpdated}</p>}
+          <div className="hero-accent" />
         </div>
+
+        <div className="policy-body">
+          {children}
+        </div>
+
+        <Link href="/policies" className="back-link">
+          <span className="back-link-arrow">←</span>
+          All Policies
+        </Link>
       </div>
     </>
   );

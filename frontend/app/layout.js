@@ -1,8 +1,10 @@
 // app/layout.js
+// Added AuthProvider wrapping CartProvider so auth is available everywhere
 
 import './globals.css';
 import { CartProvider } from '../src/context/CartContext';
-import ConditionalShell from '../src/components/ConditionalShell';
+import { AuthProvider }  from '../src/context/AuthContext';
+import ConditionalShell  from '../src/components/ConditionalShell';
 
 export const metadata = {
   title: 'पूजा सामग्री — पण्डित पुष्कर राज न्यौपाने',
@@ -21,11 +23,13 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <CartProvider>
-          <ConditionalShell>
-            {children}
-          </ConditionalShell>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <ConditionalShell>
+              {children}
+            </ConditionalShell>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

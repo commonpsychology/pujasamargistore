@@ -17,7 +17,9 @@ export default function Shop() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
-  const [sort, setSort] = useState('default');
+const [sort, setSort] = useState('default');
+const [mounted, setMounted] = useState(false);
+useEffect(() => { setMounted(true); }, []); // eslint-disable-line
 
   useEffect(() => {
     fetch('/api/products')
@@ -204,15 +206,17 @@ export default function Shop() {
       <main className="shop-page">
 
         {/* Header — cart pill only, clicking goes to /checkout */}
-        <div className="shop-header">
-          <div className="cart-pill" onClick={() => router.push('/checkout')}>
-            🛒
-            <span>{cartCount} item{cartCount !== 1 ? 's' : ''} in cart</span>
-            {cartCount > 0 && (
-              <span className="cart-badge">{cartCount}</span>
-            )}
-          </div>
-        </div>
+       <div className="shop-header">
+  {mounted && (
+    <div className="cart-pill" onClick={() => router.push('/checkout')}>
+      🛒
+      <span>{cartCount} item{cartCount !== 1 ? 's' : ''} in cart</span>
+      {cartCount > 0 && (
+        <span className="cart-badge">{cartCount}</span>
+      )}
+    </div>
+  )}
+</div>
 
         {/* Search + Sort */}
         <div className="controls">

@@ -6,6 +6,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import MapHolder from './MapHolder';
+import Footer from '@/src/components/Footer';
 
 const STATS = [
   { value: '5000+', label: 'Happy Devotees', emoji: '🙏' },
@@ -496,62 +497,61 @@ export default function About() {
       <main className="about-page">
 
         {/* ── HERO ── */}
-        {/* ── HERO ── */}
-<section className="hero">
-  <div className="hero-ring" />
-  <div className="hero-glow" />
+        <section className="hero">
+          <div className="hero-ring" />
+          <div className="hero-glow" />
 
-  <div className="hero-inner">
-    {/* Text */}
-    <div className="hero-text">
-      <div className="eyebrow">
-        <span>🪔</span>
-        <span>Our Story</span>
-      </div>
+          <div className="hero-inner">
+            {/* Text */}
+            <div className="hero-text">
+              <div className="eyebrow">
+                <span>🪔</span>
+                <span>Our Story</span>
+              </div>
 
-      <h1 className="hero-heading">
-        Devoted to Your<br />
-        <em>Sacred Rituals</em>
-      </h1>
+              <h1 className="hero-heading">
+                Devoted to Your<br />
+                <em>Sacred Rituals</em>
+              </h1>
 
-      <p className="hero-para">
-        We are dedicated to providing authentic religious items for your daily rituals
-        and special ceremonies. Our goal is to make it easy for everyone to access
-        high-quality items from the comfort of their home.
-      </p>
-      <p className="hero-para-ne">
-        हामी तपाईंको पूजा तथा धार्मिक कार्यहरूको लागि गुणस्तरीय सामग्रीहरू उपलब्ध
-        गराउन समर्पित छौँ। हाम्रो उद्देश्य तपाईंलाई घरमै बस्दा नै उच्च गुणस्तरीय
-        सामग्रीहरू सजिलै उपलब्ध गराउनु हो।
-      </p>
+              <p className="hero-para">
+                We are dedicated to providing authentic religious items for your daily rituals
+                and special ceremonies. Our goal is to make it easy for everyone to access
+                high-quality items from the comfort of their home.
+              </p>
+              <p className="hero-para-ne">
+                हामी तपाईंको पूजा तथा धार्मिक कार्यहरूको लागि गुणस्तरीय सामग्रीहरू उपलब्ध
+                गराउन समर्पित छौँ। हाम्रो उद्देश्य तपाईंलाई घरमै बस्दा नै उच्च गुणस्तरीय
+                सामग्रीहरू सजिलै उपलब्ध गराउनु हो।
+              </p>
 
-      <Link href="/shop" className="hero-cta">
-        🛍️ Shop Pooja Items
-        <span style={{ fontSize: '18px' }}>→</span>
-      </Link>
-    </div>
-
-    {/* MapHolder + Floating Badge */}
-    <div className="hero-img-wrap">
-      <div style={{ position: 'relative' }}>
-        <div className="corner-tl" />
-        <div className="corner-br" />
-        <MapHolder />
-        <div className="float-badge">
-          <span style={{ fontSize: '24px' }}>✨</span>
-          <div>
-            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '13px' }}>
-              Same-Day Delivery
+              <Link href="/shop" className="hero-cta">
+                🛍️ Shop Pooja Items
+                <span style={{ fontSize: '18px' }}>→</span>
+              </Link>
             </div>
-            <div style={{ color: '#64748b', fontSize: '11px' }}>
-              Kathmandu Valley
+
+            {/* MapHolder + Floating Badge */}
+            <div className="hero-img-wrap">
+              <div style={{ position: 'relative' }}>
+                <div className="corner-tl" />
+                <div className="corner-br" />
+                <MapHolder />
+                <div className="float-badge">
+                  <span style={{ fontSize: '24px' }}>✨</span>
+                  <div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '13px' }}>
+                      Same-Day Delivery
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: '11px' }}>
+                      Kathmandu Valley
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+        </section>
 
         {/* ── STATS ── */}
         <section className="stats-section">
@@ -616,6 +616,7 @@ export default function About() {
         </div>
 
       </main>
-    </>
+
+          </>
   );
 }

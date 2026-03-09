@@ -1,544 +1,341 @@
 'use client';
-
 // app/login/page.js
-// Sacred login page — matches puja website theme
-// Username + password → redirects to role-specific dashboard
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../src/context/AuthContext';
 
-// ─────────────────────────────────────────────────────────────
-// USER ACCOUNTS — add/remove users here
-// Each user has a unique username, password, and a "redirect" path
-// showing ONLY their relevant data section
-// ─────────────────────────────────────────────────────────────
-const USERS = [
-  {
-    username: 'pushkar',
-    password: 'pandit2025',
-    role: 'Admin',
-    redirect: '/admin/orders',
-    greeting: 'पण्डितजी, स्वागत छ',
-  },
-  {
-    username: 'delivery',
-    password: 'deliver123',
-    role: 'Delivery',
-    redirect: '/admin/delivery',
-    greeting: 'Welcome, Delivery Partner',
-  },
-  {
-    username: 'accounts',
-    password: 'accounts123',
-    role: 'Accounts',
-    redirect: '/admin/accounts',
-    greeting: 'Welcome, Accounts',
-  },
-];
-// ─────────────────────────────────────────────────────────────
+const SYMBOLS = ['ॐ', '☸', '🪔', '✦', '❋', 'ॐ', '᳚', '✦', '🪔', '☸'];
 
-// Decorative Sanskrit/Devanagari symbols for the background
-const SYMBOLS = ['ॐ', '卐', '☸', '🪔', '꧁', '꧂', '᳚', 'ॐ', '✦', '❋'];
+const ROLE_REDIRECT = {
+  admin:    '/admin/orders',
+  delivery: '/admin/delivery',
+  accounts: '/admin/accounts',
+  customer: '/',
+};
+
+// Redirect as soon as we have a user — use quickRole from JWT metadata
+// so we don't wait for the profile DB row to load.
+// Falls back to '/' if role is unknown (safe default).
+function getRedirect(role) {
+  return ROLE_REDIRECT[role] ?? '/';
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn, user, quickRole, sessionChecked } = useAuth();
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd]   = useState(false);
-  const [error, setError]       = useState('');
-  const [shake, setShake]       = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [success, setSuccess]   = useState(null); // holds the matched user
-  const [mounted, setMounted]   = useState(false);
+  const [identifier, setIdentifier] = useState('');
+  const [password,   setPassword]   = useState('');
+  const [showPwd,    setShowPwd]    = useState(false);
+  const [error,      setError]      = useState('');
+  const [shake,      setShake]      = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [success,    setSuccess]    = useState(false);
+  const [mounted,    setMounted]    = useState(false);
 
-  // Already logged in? Redirect
-useEffect(() => {
-  if (typeof window === 'undefined') return;
-  const saved = sessionStorage.getItem('puja_user');
-  if (saved) {
-    try {
-      const u = JSON.parse(saved);
-      router.replace(u.redirect);
-    } catch (_) {}
-  }
-}, [router]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
-  const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password.');
-      triggerShake();
-      return;
+  // Redirect as soon as user is set — don't wait for profile row
+  useEffect(() => {
+    if (sessionChecked && user) {
+      router.replace(getRedirect(quickRole));
     }
-
-    setLoading(true);
-    setError('');
-
-    // Simulate a brief auth delay for UX feel
-    await new Promise(r => setTimeout(r, 600));
-
-    const match = USERS.find(
-      u => u.username.toLowerCase() === username.trim().toLowerCase() &&
-           u.password === password
-    );
-
-    if (!match) {
-      setLoading(false);
-      setError('Invalid username or password. Please try again.');
-      triggerShake();
-      return;
-    }
-
-    // Save session
-    sessionStorage.setItem('puja_user', JSON.stringify(match));
-    setSuccess(match);
-
-    // Short success pause then redirect
-    await new Promise(r => setTimeout(r, 1200));
-    router.push(match.redirect);
-  };
+  }, [sessionChecked, user, quickRole, router]);
 
   const triggerShake = () => {
     setShake(true);
-    setTimeout(() => setShake(false), 600);
+    setTimeout(() => setShake(false), 650);
   };
+
+  const handleLogin = async () => {
+    if (!identifier.trim() || !password.trim()) {
+      setError('Please enter your username / email and password.');
+      triggerShake();
+      return;
+    }
+    setLoading(true);
+    setError('');
+
+    const isEmail = identifier.includes('@');
+    const { error: authErr } = await signIn(
+      isEmail
+        ? { email: identifier.trim(), password }
+        : { username: identifier.trim(), password }
+    );
+
+    if (authErr) {
+      setLoading(false);
+      setError(
+        authErr.message === 'Invalid login credentials'
+          ? 'Wrong username or password. Please try again.'
+          : authErr.message || 'Sign in failed. Please try again.'
+      );
+      triggerShake();
+      return;
+    }
+
+    // Auth succeeded — show success state immediately.
+    // The useEffect above will fire and redirect as soon as
+    // the auth state listener updates `user`.
+    setSuccess(true);
+  };
+
+  // Don't render form until we know if user is already logged in
+  if (!sessionChecked) return null;
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@400;500;600;800&family=Tiro+Devanagari+Sanskrit:ital@0;1&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; }
 
-        :root {
-          --gold:    #facc15;
-          --gold2:   #fbbf24;
-          --amber:   #f59e0b;
-          --deep:    #080d18;
-          --surface: #0c1525;
-          --surface2:#0f1e35;
-          --border:  #1a2d4a;
-          --border2: #1e3550;
-          --text:    #f1f5f9;
-          --muted:   #4a6080;
-          --muted2:  #64829a;
-          --red:     #ef4444;
-          --green:   #22c55e;
+        .lp-root {
+          position: fixed; inset: 0;
+          background: #080d18;
+          font-family: 'DM Sans', -apple-system, sans-serif;
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden; z-index: 0;
         }
-
-        /* ── Animations ── */
-        @keyframes floatUp {
-          0%   { transform: translateY(0)   rotate(0deg);   opacity: 0.04; }
-          50%  { opacity: 0.09; }
-          100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
-        }
-        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
-        @keyframes shake {
-          0%,100% { transform: translateX(0); }
-          15%     { transform: translateX(-10px); }
-          30%     { transform: translateX(10px); }
-          45%     { transform: translateX(-8px); }
-          60%     { transform: translateX(8px); }
-          75%     { transform: translateX(-4px); }
-          90%     { transform: translateX(4px); }
-        }
-        @keyframes pulse  { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
-        @keyframes glow   { 0%,100% { box-shadow: 0 0 20px rgba(250,204,21,0.1); } 50% { box-shadow: 0 0 40px rgba(250,204,21,0.25), 0 0 80px rgba(250,204,21,0.08); } }
-        @keyframes diyas  { 0%,100% { transform: scaleY(1) translateY(0); opacity: 0.9; } 50% { transform: scaleY(1.15) translateY(-2px); opacity: 1; } }
-        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes successPop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
-
-        /* ── Page ── */
-        .login-page {
-          font-family: 'DM Sans', sans-serif;
-          background: var(--deep);
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          position: relative;
-          overflow: hidden;
-          animation: fadeIn 0.4s ease;
-        }
-
-        /* ── Floating symbols background ── */
-        .bg-symbols {
-          position: absolute; inset: 0; pointer-events: none; overflow: hidden;
-        }
-        .bg-sym {
-          position: absolute;
-          font-size: 28px;
-          color: var(--gold);
-          animation: floatUp linear infinite;
-          user-select: none;
-        }
-
-        /* ── Radial glow ── */
-        .bg-glow {
-          position: absolute; inset: 0; pointer-events: none;
+        .lp-glow {
+          position: absolute; inset: 0; pointer-events: none; z-index: 1;
           background:
-            radial-gradient(ellipse 60% 50% at 50% 100%, rgba(250,204,21,0.05) 0%, transparent 70%),
-            radial-gradient(ellipse 80% 40% at 50% 0%,   rgba(245,158,11,0.03) 0%, transparent 60%);
+            radial-gradient(ellipse 70% 55% at 50% 110%, rgba(250,204,21,0.07) 0%, transparent 65%),
+            radial-gradient(ellipse 90% 40% at 50% -10%,  rgba(245,158,11,0.04) 0%, transparent 60%);
         }
-
-        /* ── Mandala ring ── */
-        .mandala-ring {
-          position: absolute;
-          width: 500px; height: 500px;
-          border-radius: 50%;
-          border: 1px solid rgba(250,204,21,0.04);
+        .lp-symbols { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+        .lp-sym { position: absolute; color: #facc15; user-select: none; animation: lpFloat linear infinite; }
+        @keyframes lpFloat {
+          0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+          10%  { opacity: 0.06; }
+          90%  { opacity: 0.06; }
+          100% { transform: translateY(-105vh) rotate(380deg); opacity: 0; }
+        }
+        .lp-ring {
+          position: absolute; width: 580px; height: 580px; border-radius: 50%;
+          border: 1px solid rgba(250,204,21,0.035);
           left: 50%; top: 50%;
-          transform: translate(-50%, -50%);
-          animation: spinSlow 60s linear infinite;
-          pointer-events: none;
+          animation: lpRingSpin 70s linear infinite; pointer-events: none; z-index: 1;
+          transform: translate(-50%,-50%);
         }
-        .mandala-ring::before {
-          content: '';
-          position: absolute; inset: 20px;
-          border-radius: 50%;
-          border: 1px solid rgba(250,204,21,0.03);
-        }
-        .mandala-ring::after {
-          content: '';
-          position: absolute; inset: 50px;
-          border-radius: 50%;
-          border: 1px dashed rgba(250,204,21,0.03);
-        }
+        .lp-ring::before { content:''; position:absolute; inset:28px; border-radius:50%; border:1px solid rgba(250,204,21,0.025); }
+        .lp-ring::after  { content:''; position:absolute; inset:66px; border-radius:50%; border:1px dashed rgba(250,204,21,0.018); }
+        @keyframes lpRingSpin { from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)} }
 
-        /* ── Card ── */
-        .login-card {
+        .lp-card-wrap {
           position: relative; z-index: 10;
+          width: min(460px, calc(100vw - 32px));
+          max-height: calc(100vh - 32px); overflow-y: auto;
+        }
+        .lp-card-wrap::-webkit-scrollbar { display: none; }
+        .lp-card {
           background: linear-gradient(160deg, #0e1e38 0%, #080d18 100%);
-          border: 1px solid var(--border);
-          border-radius: 28px;
-          padding: 0;
-          width: 100%; max-width: 440px;
-          overflow: hidden;
-          animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
-          transition: transform 0.15s;
+          border: 1px solid #1a2d4a; border-radius: 28px; overflow: hidden;
+          animation: lpSlideUp 0.45s cubic-bezier(0.16,1,0.3,1) both;
         }
-        .login-card.shake { animation: shake 0.55s ease; }
+        .lp-card.shake { animation: lpShake 0.55s ease; }
+        @keyframes lpSlideUp { from{opacity:0;transform:translateY(24px) scale(0.97)} to{opacity:1;transform:none} }
+        @keyframes lpShake {
+          0%,100%{transform:translateX(0)} 15%{transform:translateX(-9px)}
+          35%{transform:translateX(9px)}   55%{transform:translateX(-6px)}
+          75%{transform:translateX(6px)}   90%{transform:translateX(-2px)}
+        }
+        .lp-topbar { height:3px; background:linear-gradient(90deg,transparent,#f59e0b 25%,#facc15 50%,#f59e0b 75%,transparent); }
+        .lp-body { padding: 36px 40px 42px; }
+        @media(max-width:500px){ .lp-body{padding:26px 22px 32px;} }
 
-        /* Top gold stripe */
-        .card-topbar {
-          height: 3px;
-          background: linear-gradient(90deg, transparent 0%, var(--amber) 30%, var(--gold) 50%, var(--amber) 70%, transparent 100%);
+        /* Brand */
+        .lp-brand { text-align:center; margin-bottom:28px; }
+        .lp-diyas { display:flex; justify-content:center; align-items:flex-end; gap:14px; margin-bottom:10px; }
+        .lp-diya  { display:inline-block; animation:lpDiya 2s ease-in-out infinite; }
+        .lp-diya:nth-child(1){ font-size:18px; opacity:0.55; animation-delay:0s; }
+        .lp-diya:nth-child(2){ font-size:30px; animation-delay:0.18s; }
+        .lp-diya:nth-child(3){ font-size:18px; opacity:0.55; animation-delay:0.36s; }
+        @keyframes lpDiya { 0%,100%{transform:scaleY(1) translateY(0)} 50%{transform:scaleY(1.22) translateY(-3px)} }
+        .lp-om {
+          font-size:50px; line-height:1; display:block; margin-bottom:10px;
+          background:linear-gradient(135deg,#f59e0b,#facc15,#f59e0b);
+          -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+          filter:drop-shadow(0 0 14px rgba(250,204,21,0.3));
         }
+        .lp-brand-name { font-size:22px; font-weight:700; color:#f1f5f9; margin-bottom:4px; letter-spacing:-0.3px; }
+        .lp-brand-name em { color:#facc15; font-style:italic; }
+        .lp-brand-sub { font-size:10px; font-weight:800; letter-spacing:3.5px; text-transform:uppercase; color:#334155; }
 
-        .card-inner { padding: 40px 40px 44px; }
-        @media (max-width: 480px) { .card-inner { padding: 32px 24px 36px; } }
+        .lp-divider { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+        .lp-divline { flex:1; height:1px; background:#1a2d4a; }
+        .lp-divtext { font-size:10px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; color:#334155; }
 
-        /* ── Brand section ── */
-        .brand { text-align: center; margin-bottom: 36px; }
+        .lp-field { margin-bottom:14px; }
+        .lp-label { display:block; margin-bottom:6px; font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#4a6080; }
+        .lp-wrap  { position:relative; }
+        .lp-ico   { position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:14px; pointer-events:none; opacity:0.4; }
+        .lp-input {
+          width:100%; background:rgba(255,255,255,0.03); border:1px solid #1e3550;
+          border-radius:12px; padding:13px 13px 13px 40px;
+          color:#f1f5f9; font-size:14px; font-family:inherit;
+          outline:none; transition:border-color 0.18s, box-shadow 0.18s;
+        }
+        .lp-input::placeholder { color:#1e3550; }
+        .lp-input:focus { border-color:rgba(250,204,21,0.4); box-shadow:0 0 0 3px rgba(250,204,21,0.07); }
+        .lp-input.pwd { padding-right:44px; }
+        .lp-eye { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#334155; font-size:14px; padding:3px; transition:color 0.2s; }
+        .lp-eye:hover { color:#64748b; }
+        .lp-hint { font-size:10px; color:#273d58; margin-top:5px; padding-left:2px; }
 
-        .diya-row {
-          display: flex; align-items: center; justify-content: center;
-          gap: 12px; margin-bottom: 16px;
+        .lp-error {
+          display:flex; align-items:center; gap:9px;
+          background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.22);
+          border-radius:10px; padding:10px 14px; margin-bottom:14px;
+          font-size:12px; font-weight:600; color:#f87171;
+          animation:lpErrIn 0.2s ease;
         }
-        .diya {
-          font-size: 22px;
-          animation: diyas 2s ease-in-out infinite;
-          display: inline-block;
-        }
-        .diya:nth-child(1) { animation-delay: 0s;    font-size: 18px; opacity: 0.6; }
-        .diya:nth-child(2) { animation-delay: 0.15s; font-size: 26px; }
-        .diya:nth-child(3) { animation-delay: 0.3s;  font-size: 18px; opacity: 0.6; }
+        @keyframes lpErrIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
 
-        .om-symbol {
-          font-family: 'Tiro Devanagari Sanskrit', serif;
-          font-size: 44px; line-height: 1;
-          background: linear-gradient(135deg, var(--amber), var(--gold), var(--amber));
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text;
-          display: block; margin-bottom: 10px;
-          filter: drop-shadow(0 2px 12px rgba(250,204,21,0.3));
+        .lp-btn {
+          width:100%; padding:14px;
+          background:linear-gradient(135deg,#92400e 0%,#b45309 45%,#facc15 100%);
+          color:#0f172a; border:none; border-radius:13px;
+          font-size:15px; font-weight:800; font-family:inherit;
+          cursor:pointer; margin-top:4px;
+          transition:transform 0.12s, box-shadow 0.18s, opacity 0.18s;
+          position:relative; overflow:hidden;
         }
+        .lp-btn::after {
+          content:''; position:absolute; inset:0;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+          transform:translateX(-100%); transition:transform 0.4s ease;
+        }
+        .lp-btn:not(:disabled):hover::after { transform:translateX(100%); }
+        .lp-btn:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(250,204,21,0.25); }
+        .lp-btn:disabled { opacity:0.65; cursor:not-allowed; }
+        .lp-btn-inner { display:flex; align-items:center; justify-content:center; gap:9px; position:relative; z-index:1; }
+        .lp-spin { width:16px; height:16px; border:2px solid rgba(15,23,42,0.2); border-top-color:#0f172a; border-radius:50%; animation:lpRingSpin 0.55s linear infinite; }
 
-        .brand-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 22px; font-weight: 600;
-          color: var(--text); line-height: 1.2; margin-bottom: 4px;
-        }
-        .brand-name span { color: var(--gold); font-style: italic; }
-        .brand-sub {
-          font-size: 11px; font-weight: 600; letter-spacing: 3px;
-          text-transform: uppercase; color: var(--muted);
-        }
+        .lp-register { margin-top:14px; padding:12px 16px; background:rgba(250,204,21,0.04); border:1px solid rgba(250,204,21,0.1); border-radius:12px; text-align:center; }
+        .lp-register p { font-size:12px; color:#4a6080; }
+        .lp-register a { color:#facc15; font-weight:700; text-decoration:none; }
+        .lp-register a:hover { text-decoration:underline; }
+        .lp-footer { text-align:center; margin-top:14px; font-size:11px; color:#334155; line-height:1.7; }
+        .lp-footer a { color:#475569; text-decoration:none; }
+        .lp-footer a:hover { color:#facc15; }
 
-        /* ── Divider ── */
-        .divider {
-          display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
-        }
-        .divider-line { flex: 1; height: 1px; background: var(--border); }
-        .divider-text { font-size: 10px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); }
-
-        /* ── Form ── */
-        .field { margin-bottom: 16px; }
-        .field-label {
-          font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
-          text-transform: uppercase; color: var(--muted2);
-          display: block; margin-bottom: 7px;
-        }
-        .field-wrap { position: relative; }
-        .field-icon {
-          position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-          font-size: 15px; pointer-events: none; opacity: 0.5;
-        }
-        .field-input {
-          width: 100%;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid var(--border2);
-          border-radius: 12px;
-          padding: 13px 14px 13px 42px;
-          color: var(--text);
-          font-size: 14px;
-          font-family: 'DM Sans', sans-serif;
-          outline: none;
-          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-          letter-spacing: 0.3px;
-        }
-        .field-input::placeholder { color: #273d58; }
-        .field-input:focus {
-          border-color: rgba(250,204,21,0.35);
-          background: rgba(250,204,21,0.02);
-          box-shadow: 0 0 0 3px rgba(250,204,21,0.06);
-        }
-        .field-input.pwd { padding-right: 44px; letter-spacing: 2px; }
-        .field-input.pwd::placeholder { letter-spacing: 0.3px; }
-        .toggle-pwd {
-          position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-          background: none; border: none; cursor: pointer;
-          color: var(--muted); font-size: 15px; padding: 4px;
-          transition: color 0.2s; line-height: 1;
-        }
-        .toggle-pwd:hover { color: var(--muted2); }
-
-        /* ── Error ── */
-        .error-box {
-          display: flex; align-items: center; gap: 8px;
-          background: rgba(239,68,68,0.07);
-          border: 1px solid rgba(239,68,68,0.2);
-          border-radius: 10px;
-          padding: 10px 14px;
-          margin-bottom: 16px;
-          font-size: 12px; font-weight: 600; color: #f87171;
-          animation: slideUp 0.25s ease;
-        }
-
-        /* ── Submit button ── */
-        .login-btn {
-          width: 100%; padding: 15px;
-          background: linear-gradient(135deg, #92400e 0%, #b45309 40%, #facc15 100%);
-          color: #0f172a;
-          border: none; border-radius: 14px;
-          font-size: 15px; font-weight: 800;
-          font-family: 'DM Sans', sans-serif;
-          cursor: pointer; margin-top: 8px;
-          transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
-          position: relative; overflow: hidden;
-          letter-spacing: 0.3px;
-        }
-        .login-btn::before {
-          content: '';
-          position: absolute; inset: 0;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-          transform: translateX(-100%);
-          transition: transform 0.4s ease;
-        }
-        .login-btn:hover::before { transform: translateX(100%); }
-        .login-btn:not(:disabled):hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 32px rgba(250,204,21,0.3);
-        }
-        .login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        .btn-inner { display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .spinner-sm {
-          width: 16px; height: 16px;
-          border: 2px solid rgba(15,23,42,0.3);
-          border-top-color: #0f172a;
-          border-radius: 50%;
-          animation: spinSlow 0.6s linear infinite;
-        }
-
-        /* ── Footer note ── */
-        .login-footer {
-          text-align: center; margin-top: 24px;
-          font-size: 11px; color: var(--muted);
-          line-height: 1.6;
-        }
-        .login-footer strong { color: #334155; }
-
-        /* ── Success overlay ── */
-        .success-overlay {
-          position: fixed; inset: 0; z-index: 100;
-          background: rgba(8,13,24,0.92);
-          display: flex; align-items: center; justify-content: center;
-          backdrop-filter: blur(8px);
-          animation: fadeIn 0.3s ease;
-        }
-        .success-inner {
-          text-align: center;
-          animation: successPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
-        }
-        .success-om {
-          font-family: 'Tiro Devanagari Sanskrit', serif;
-          font-size: 80px; line-height: 1;
-          background: linear-gradient(135deg, var(--amber), var(--gold));
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text;
-          display: block; margin-bottom: 16px;
-          filter: drop-shadow(0 4px 20px rgba(250,204,21,0.5));
-          animation: diyas 1.5s ease-in-out infinite;
-        }
-        .success-greeting {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 28px; font-weight: 600; color: var(--text);
-          margin-bottom: 6px;
-        }
-        .success-role {
-          font-size: 11px; font-weight: 800; letter-spacing: 3px;
-          text-transform: uppercase; color: var(--gold);
-        }
-        .success-dots { display: flex; gap: 6px; justify-content: center; margin-top: 20px; }
-        .dot {
-          width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
-          animation: pulse 1s ease infinite;
-        }
-        .dot:nth-child(2) { animation-delay: 0.15s; }
-        .dot:nth-child(3) { animation-delay: 0.3s; }
+        /* Success */
+        .lp-success { position:fixed; inset:0; z-index:300; background:rgba(8,13,24,0.95); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; animation:lpFadeIn 0.25s ease; }
+        @keyframes lpFadeIn { from{opacity:0} to{opacity:1} }
+        .lp-success-inner { text-align:center; animation:lpPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+        @keyframes lpPop { 0%{transform:scale(0.6);opacity:0} 60%{transform:scale(1.07)} 100%{transform:scale(1);opacity:1} }
+        .lp-success-om { font-size:88px; line-height:1; display:block; margin-bottom:16px; background:linear-gradient(135deg,#f59e0b,#facc15); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; filter:drop-shadow(0 4px 20px rgba(250,204,21,0.5)); animation:lpDiya 1.4s ease-in-out infinite; }
+        .lp-success-title { font-size:26px; font-weight:700; color:#f1f5f9; margin-bottom:6px; }
+        .lp-success-sub   { font-size:11px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#facc15; }
+        .lp-dots { display:flex; gap:7px; justify-content:center; margin-top:18px; }
+        .lp-dot  { width:6px; height:6px; border-radius:50%; background:#facc15; animation:lpPulse 1s ease infinite; }
+        .lp-dot:nth-child(2){animation-delay:0.15s} .lp-dot:nth-child(3){animation-delay:0.3s}
+        @keyframes lpPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
 
-      {/* ── Floating symbols ── */}
-      <div className="bg-symbols">
-        {mounted && SYMBOLS.map((sym, i) => (
-          <span
-            key={i}
-            className="bg-sym"
-            style={{
-              left:            `${(i * 11 + 5) % 95}%`,
-              bottom:          `-${20 + (i * 7) % 40}px`,
-              animationDuration:`${12 + (i * 3.7) % 16}s`,
-              animationDelay:  `${(i * 2.1) % 8}s`,
-              fontSize:        `${18 + (i * 5) % 24}px`,
-              opacity:         0.04 + (i % 4) * 0.01,
-            }}
-          >
-            {sym}
-          </span>
-        ))}
-      </div>
-
-      <div className="bg-glow" />
-      <div className="mandala-ring" />
-
-      {/* ── Success overlay ── */}
-      {success && (
-        <div className="success-overlay">
-          <div className="success-inner">
-            <span className="success-om">ॐ</span>
-            <p className="success-greeting">{success.greeting}</p>
-            <p className="success-role">{success.role} Dashboard</p>
-            <div className="success-dots">
-              <div className="dot" /><div className="dot" /><div className="dot" />
-            </div>
-          </div>
+      <div className="lp-root">
+        <div className="lp-glow" />
+        <div className="lp-ring" />
+        <div className="lp-symbols">
+          {mounted && SYMBOLS.map((sym, i) => (
+            <span key={i} className="lp-sym" style={{
+              left:             `${(i * 10 + 4) % 94}%`,
+              bottom:           `-40px`,
+              animationDuration:`${14 + (i * 3.3) % 14}s`,
+              animationDelay:   `${(i * 1.9) % 9}s`,
+              fontSize:         `${16 + (i * 6) % 22}px`,
+            }}>{sym}</span>
+          ))}
         </div>
-      )}
 
-      {/* ── Login card ── */}
-      <div className={`login-card${shake ? ' shake' : ''}`}>
-        <div className="card-topbar" />
-        <div className="card-inner">
-
-          {/* Brand */}
-          <div className="brand">
-            <div className="diya-row">
-              <span className="diya">🪔</span>
-              <span className="diya">🪔</span>
-              <span className="diya">🪔</span>
-            </div>
-            <span className="om-symbol">ॐ</span>
-            <p className="brand-name">
-              पण्डित <span>पुष्कर राज</span> न्यौपाने
-            </p>
-            <p className="brand-sub">Puja Samagri · Thimi, Bhaktapur</p>
-          </div>
-
-          {/* Divider */}
-          <div className="divider">
-            <div className="divider-line" />
-            <span className="divider-text">Staff Login</span>
-            <div className="divider-line" />
-          </div>
-
-          {/* Username */}
-          <div className="field">
-            <label className="field-label">Username</label>
-            <div className="field-wrap">
-              <span className="field-icon">👤</span>
-              <input
-                className="field-input"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={e => { setUsername(e.target.value); setError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                autoComplete="username"
-                autoFocus
-              />
+        {success && (
+          <div className="lp-success">
+            <div className="lp-success-inner">
+              <span className="lp-success-om">ॐ</span>
+              <p className="lp-success-title">नमस्ते 🙏</p>
+              <p className="lp-success-sub">Redirecting…</p>
+              <div className="lp-dots">
+                <div className="lp-dot"/><div className="lp-dot"/><div className="lp-dot"/>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Password */}
-          <div className="field">
-            <label className="field-label">Password</label>
-            <div className="field-wrap">
-              <span className="field-icon">🔑</span>
-              <input
-                className={`field-input pwd`}
-                type={showPwd ? 'text' : 'password'}
-                placeholder="Enter your password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                autoComplete="current-password"
-              />
-              <button className="toggle-pwd" onClick={() => setShowPwd(s => !s)} tabIndex={-1}>
-                {showPwd ? '🙈' : '👁'}
+        <div className="lp-card-wrap">
+          <div className={`lp-card${shake ? ' shake' : ''}`}>
+            <div className="lp-topbar" />
+            <div className="lp-body">
+
+              <div className="lp-brand">
+                <div className="lp-diyas">
+                  <span className="lp-diya">🪔</span>
+                  <span className="lp-diya">🪔</span>
+                  <span className="lp-diya">🪔</span>
+                </div>
+                <span className="lp-om">ॐ</span>
+                <p className="lp-brand-name">पण्डित <em>पुष्कर राज</em> न्यौपाने</p>
+                <p className="lp-brand-sub">Puja Samagri · Thimi, Bhaktapur</p>
+              </div>
+
+              <div className="lp-divider">
+                <div className="lp-divline"/><span className="lp-divtext">Sign In</span><div className="lp-divline"/>
+              </div>
+
+              <div className="lp-field">
+                <label className="lp-label">Username or Email</label>
+                <div className="lp-wrap">
+                  <span className="lp-ico">👤</span>
+                  <input
+                    className="lp-input" type="text"
+                    placeholder="username or email@example.com"
+                    value={identifier}
+                    onChange={e => { setIdentifier(e.target.value); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                    autoComplete="username" autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="lp-field">
+                <label className="lp-label">Password</label>
+                <div className="lp-wrap">
+                  <span className="lp-ico">🔑</span>
+                  <input
+                    className="lp-input pwd"
+                    type={showPwd ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                    autoComplete="current-password"
+                  />
+                  <button className="lp-eye" onClick={() => setShowPwd(s => !s)} tabIndex={-1}>
+                    {showPwd ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                <p className="lp-hint">Use your username (e.g. ram123) or full email</p>
+              </div>
+
+              {error && <div className="lp-error"><span>⚠️</span><span>{error}</span></div>}
+
+              <button className="lp-btn" onClick={handleLogin} disabled={loading || success}>
+                <span className="lp-btn-inner">
+                  {loading ? <><div className="lp-spin"/> Signing in…</> : <>🪔 &nbsp;Sign In</>}
+                </span>
               </button>
+
+              <div className="lp-register">
+                <p>New customer? <a href="/register">Create a free account</a></p>
+              </div>
+              <p className="lp-footer">
+                <a href="/forgot-password">Forgot password?</a>
+                &nbsp;·&nbsp;
+                <span style={{color:'#1e293b'}}>Staff use assigned credentials</span>
+              </p>
+
             </div>
           </div>
-
-          {/* Error */}
-          {error && (
-            <div className="error-box">
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Submit */}
-          <button
-            className="login-btn"
-            onClick={handleLogin}
-            disabled={loading || !!success}
-          >
-            <span className="btn-inner">
-              {loading
-                ? <><div className="spinner-sm" /> Verifying…</>
-                : <>🪔 Enter Dashboard</>}
-            </span>
-          </button>
-
-          {/* Footer */}
-          <p className="login-footer">
-            Access is restricted to authorised staff only.<br />
-            <strong>Each account shows only your relevant section.</strong>
-          </p>
-
         </div>
       </div>
     </>
