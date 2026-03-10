@@ -30,7 +30,6 @@ export default function Navbar() {
     return () => clearTimeout(t);
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target)) {
@@ -41,11 +40,10 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Sign out — passes router so AuthContext navigates immediately ─────────
   const handleSignOut = async () => {
     setUserDropOpen(false);
     setMenuOpen(false);
-    await signOut(router); // router.replace('/login') called inside signOut
+    await signOut(router);
   };
 
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || '?';
@@ -83,8 +81,6 @@ export default function Navbar() {
         }
         .user-pill-chevron { font-size: 10px; color: #475569; transition: transform 0.2s; margin-left: 2px; }
         .user-pill-chevron.open { transform: rotate(180deg); }
-
-        /* Dropdown */
         .user-dropdown {
           position: absolute; top: calc(100% + 10px); right: 0;
           min-width: 220px;
@@ -104,7 +100,6 @@ export default function Navbar() {
         }
         .drop-header-name  { font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; }
         .drop-header-email { font-size: 11px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
         .drop-items { padding: 7px; }
         .drop-item {
           display: flex; align-items: center; gap: 10px;
@@ -120,7 +115,6 @@ export default function Navbar() {
         .drop-divider    { height: 1px; background: #0f1a2e; margin: 4px 7px; }
         .drop-item.logout { color: #f87171; }
         .drop-item.logout:hover { background: rgba(239,68,68,0.08); color: #fca5a5; }
-
         @media(max-width: 640px) {
           .user-pill-info { display: none; }
           .user-pill-chevron { display: none; }
@@ -130,23 +124,27 @@ export default function Navbar() {
 
       <header className="w-full sticky top-0 z-50">
 
-        {/* TOP STRIP */}
         <div className="w-full bg-yellow-400 py-1.5 text-center text-xs font-semibold text-slate-900 tracking-wide">
           🕉️ &nbsp;नित्य पूजा सामग्री उपलब्ध • Free delivery above Rs. 1999&nbsp; 🕉️
         </div>
 
-        {/* MAIN NAVBAR */}
         <div className="w-full bg-[#111827] shadow-2xl border-b border-yellow-400/20">
           <nav className="flex h-28 items-center justify-between px-6 md:px-12 max-w-screen-2xl mx-auto gap-6">
 
             {/* LEFT: BRAND */}
             <div className="flex items-center gap-4 flex-shrink-0">
+              {/* FIX: outer div has relative, inner div also needs relative for Image fill */}
               <div className="relative w-16 h-16 md:w-20 md:h-20 flex-shrink-0">
-                <div className="w-full h-full rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.5)] bg-amber-900 flex items-center justify-center">
+                <div
+                  className="w-full h-full rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.5)] bg-amber-900 flex items-center justify-center"
+                  style={{ position: 'relative' }}
+                >
                   <Image
                     src='/images/buba.png'
                     alt="पण्डित पुष्कर राज न्यौपाने"
-                    fill className="object-cover" unoptimized
+                    fill
+                    className="object-cover"
+                    unoptimized
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.parentNode.innerHTML = '<span style="font-size:2rem;line-height:1">🙏</span>';
@@ -171,7 +169,6 @@ export default function Navbar() {
               <NavItem href="/about"    label="📖 About Us" />
               <NavItem href="/contact"  label="📬 Contact" />
               <NavItem href="/policies" label="📜 Policies" />
-              {/* Staff-only nav link — never shown to customers */}
               {isMounted && isStaff && (
                 <NavItem href="/admin/orders" label="⚙️ Admin" special />
               )}
@@ -180,7 +177,6 @@ export default function Navbar() {
             {/* RIGHT: BUTTONS */}
             <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
 
-              {/* ORDER PUJA */}
               <Link
                 href="/order"
                 className="hidden sm:flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition border"
@@ -191,7 +187,6 @@ export default function Navbar() {
                 🙏 <span>Order Puja</span>
               </Link>
 
-              {/* CART */}
               <Link
                 href="/checkout"
                 className="relative flex items-center gap-2 rounded-xl bg-yellow-400 px-5 py-2.5 text-sm font-extrabold text-[#111827] shadow-lg transition-all hover:bg-yellow-300 hover:scale-[1.04]"
@@ -205,7 +200,6 @@ export default function Navbar() {
                 )}
               </Link>
 
-              {/* USER PILL */}
               {isMounted && user && (
                 <div className="user-pill" ref={dropRef} onClick={() => setUserDropOpen(v => !v)}>
                   <div className="user-avatar">
@@ -248,7 +242,6 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Login link when logged out */}
               {isMounted && !user && (
                 <Link
                   href="/login"
@@ -259,7 +252,6 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* HAMBURGER */}
               <button
                 className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 text-yellow-300 text-xl border border-white/10 hover:bg-white/20 transition"
                 onClick={() => setMenuOpen(v => !v)}
@@ -291,11 +283,11 @@ export default function Navbar() {
               )}
 
               {[
-                { href:'/shop',     label:'🛍️ Shop',     special:false },
-                { href:'/cheena',   label:'🔮 चिना',      special:true  },
-                { href:'/about',    label:'📖 About Us',  special:false },
-                { href:'/contact',  label:'📬 Contact',   special:false },
-                { href:'/policies', label:'📜 Policies',  special:false },
+                { href:'/shop',     label:'🛍️ Shop',    special:false },
+                { href:'/cheena',   label:'🔮 चिना',     special:true  },
+                { href:'/about',    label:'📖 About Us', special:false },
+                { href:'/contact',  label:'📬 Contact',  special:false },
+                { href:'/policies', label:'📜 Policies', special:false },
               ].map(l => (
                 <Link key={l.href} href={l.href}
                   className={`font-bold text-base py-1 transition ${l.special ? 'text-amber-400 hover:text-amber-300' : 'text-yellow-200 hover:text-yellow-400'}`}

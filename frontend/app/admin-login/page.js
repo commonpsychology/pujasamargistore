@@ -1,87 +1,97 @@
 'use client';
 // app/admin-login/page.js
 //
-// Staff-only portal. Uses staffSignIn() which:
-//   1. Calls signInWithPassword (one network call)
-//   2. Checks app_metadata.is_staff in the returned JWT — no DB round-trip
-//   3. If not staff → signs out immediately, shows error
-//   4. If staff → redirect fires instantly from JWT role
-//
-// Customers logging in here are rejected at the JWT level before any DB call.
+// Uses the staff table in Supabase (via /api/admin/login).
+// Does NOT depend on AuthContext or any Supabase auth flow.
+// Stores session in sessionStorage so it clears when tab is closed.
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../src/context/AuthContext';
-
-const STAFF_REDIRECTS = {
-  admin:    '/admin/orders',
-  delivery: '/admin/delivery',
-  accounts: '/admin/accounts',
-};
+import Link from 'next/link';
 
 export default function AdminLoginPage() {
-  const router  = useRouter();
-  const { staffSignIn, signOut, user, isStaff, quickRole, sessionChecked } = useAuth();
+  const router = useRouter();
 
-  const [email,   setEmail]   = useState('');
-  const [password,setPassword]= useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [error,   setError]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [shake,   setShake]   = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [shake,    setShake]    = useState(false);
+  const [success,  setSuccess]  = useState(false);
+  const [checked,  setChecked]  = useState(false);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setMounted(true); }, []);
-
-  // Already logged in as staff → go straight to dashboard
+  // Check if already logged in
   useEffect(() => {
-    if (!sessionChecked || !user) return;
-    if (isStaff && quickRole) {
-      router.replace(STAFF_REDIRECTS[quickRole] ?? '/admin/orders');
-    } else if (user && !isStaff) {
-      // Logged in as customer — sign out and show error
-      signOut();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setError('This portal is for staff only. Customers use the main login page.');
-    }
-  }, [sessionChecked, user, isStaff, quickRole, router, signOut]);
+    try {
+      const stored = sessionStorage.getItem('admin_staff');
+      if (stored) {
+        const staff = JSON.parse(stored);
+        if (staff?.id) {
+          router.replace('/admin/orders');
+          return;
+        }
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setChecked(true);
+  }, [router]);
 
-  const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 600);
+  };
 
   const handleLogin = async () => {
     const trimEmail = email.trim().toLowerCase();
     if (!trimEmail || !password) {
       setError('Enter your staff email and password.');
-      triggerShake(); return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimEmail)) {
-      setError('Enter a valid email address.');
-      triggerShake(); return;
+      triggerShake();
+      return;
     }
 
     setLoading(true);
     setError('');
 
-    const { error: authErr } = await staffSignIn({ email: trimEmail, password });
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimEmail, password }),
+      });
 
-    if (authErr) {
-      setLoading(false);
-      const msg = authErr.message === 'Invalid login credentials'
-        ? 'Wrong email or password.'
-        : authErr.message || 'Sign in failed.';
-      setError(msg);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed.');
+        triggerShake();
+        setLoading(false);
+        return;
+      }
+
+      // Store staff session
+      sessionStorage.setItem('admin_staff', JSON.stringify(data.staff));
+      setSuccess(true);
+
+      // Redirect based on role
+      const redirects = {
+        admin:    '/admin/orders',
+        delivery: '/admin/delivery',
+        accounts: '/admin/accounts',
+      };
+      setTimeout(() => {
+        router.replace(redirects[data.staff.role] ?? '/admin/orders');
+      }, 800);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      setError('Network error. Please try again.');
       triggerShake();
-      return;
+      setLoading(false);
     }
-
-    // JWT is set — useEffect above fires and redirects.
-    // Show success animation while that happens.
-    setSuccess(true);
   };
 
-  if (!sessionChecked) return null;
+  if (!checked) return null;
 
   return (
     <>
@@ -91,8 +101,7 @@ export default function AdminLoginPage() {
         .al-root {
           position:fixed; inset:0; background:#04080f;
           font-family:'DM Sans',-apple-system,sans-serif;
-          display:flex; align-items:center; justify-content:center;
-          overflow:hidden;
+          display:flex; align-items:center; justify-content:center; overflow:hidden;
         }
         .al-glow {
           position:absolute; inset:0; pointer-events:none;
@@ -107,7 +116,6 @@ export default function AdminLoginPage() {
             linear-gradient(90deg, rgba(250,204,21,0.02) 1px, transparent 1px);
           background-size:48px 48px;
         }
-
         .al-wrap {
           position:relative; z-index:10;
           width:min(420px, calc(100vw - 32px));
@@ -121,29 +129,23 @@ export default function AdminLoginPage() {
         .al-card.shake { animation:alShake 0.55s ease; }
         @keyframes alSlide { from{opacity:0;transform:translateY(22px) scale(0.97)} to{opacity:1;transform:none} }
         @keyframes alShake {
-          0%,100%{transform:translateX(0)} 15%{transform:translateX(-8px)}
-          35%{transform:translateX(8px)}   55%{transform:translateX(-5px)}
-          75%{transform:translateX(5px)}   90%{transform:translateX(-2px)}
+          0%,100%{transform:translateX(0)} 15%{transform:translateX(-8px)} 35%{transform:translateX(8px)}
+          55%{transform:translateX(-5px)} 75%{transform:translateX(5px)} 90%{transform:translateX(-2px)}
         }
-
-        /* Dual-tone bar — red+gold signals "restricted zone" */
         .al-topbar { height:3px; background:linear-gradient(90deg,transparent,#dc2626 20%,#f59e0b 50%,#dc2626 80%,transparent); }
         .al-body { padding:34px 36px 40px; }
         @media(max-width:480px){ .al-body{padding:24px 20px 30px;} }
 
-        /* Brand */
         .al-brand { text-align:center; margin-bottom:24px; }
         .al-icon  { font-size:44px; display:block; margin-bottom:10px; animation:alPulse 2.5s ease-in-out infinite; }
         @keyframes alPulse { 0%,100%{opacity:0.85;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
         .al-title { font-size:21px; font-weight:800; color:#f1f5f9; margin-bottom:3px; }
         .al-sub   { font-size:10px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#334155; }
 
-        /* Restricted badge */
         .al-restricted {
           display:flex; align-items:center; justify-content:center; gap:8px;
           padding:10px 14px; margin-bottom:20px;
-          background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15);
-          border-radius:10px;
+          background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px;
         }
         .al-restricted span { font-size:11px; font-weight:700; color:#f87171; letter-spacing:0.5px; }
 
@@ -157,9 +159,9 @@ export default function AdminLoginPage() {
         .al-ico { position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:14px; pointer-events:none; opacity:0.35; }
         .al-input {
           width:100%; background:rgba(255,255,255,0.03); border:1px solid #1e3550;
-          border-radius:11px; padding:12px 13px 12px 40px;
-          color:#f1f5f9; font-size:14px; font-family:inherit;
-          outline:none; transition:border-color 0.18s, box-shadow 0.18s;
+          border-radius:11px; padding:12px 13px 12px 40px; color:#f1f5f9;
+          font-size:14px; font-family:inherit; outline:none;
+          transition:border-color 0.18s, box-shadow 0.18s;
         }
         .al-input::placeholder { color:#1e3550; }
         .al-input:focus { border-color:rgba(239,68,68,0.4); box-shadow:0 0 0 3px rgba(239,68,68,0.07); }
@@ -201,7 +203,6 @@ export default function AdminLoginPage() {
         .al-footer a { color:#475569; text-decoration:none; }
         .al-footer a:hover { color:#facc15; }
 
-        /* Success overlay */
         .al-success {
           position:fixed; inset:0; z-index:300;
           background:rgba(4,8,15,0.96); backdrop-filter:blur(12px);
@@ -211,7 +212,7 @@ export default function AdminLoginPage() {
         @keyframes alFade { from{opacity:0} to{opacity:1} }
         .al-success-inner { text-align:center; animation:alPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
         @keyframes alPop { 0%{transform:scale(0.6);opacity:0} 60%{transform:scale(1.07)} 100%{transform:scale(1);opacity:1} }
-        .al-success-icon  { font-size:70px; display:block; margin-bottom:14px; animation:alPulse 1.5s ease-in-out infinite; }
+        .al-success-icon  { font-size:70px; display:block; margin-bottom:14px; }
         .al-success-title { font-size:24px; font-weight:800; color:#f1f5f9; margin-bottom:5px; }
         .al-success-sub   { font-size:11px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:#f59e0b; }
         .al-dots { display:flex; gap:6px; justify-content:center; margin-top:16px; }
@@ -250,11 +251,13 @@ export default function AdminLoginPage() {
 
               <div className="al-restricted">
                 <span>🛡️</span>
-                <span>Authorised Staff Only — Customers Cannot Access This</span>
+                <span>Authorised Staff Only</span>
               </div>
 
               <div className="al-divider">
-                <div className="al-divline"/><span className="al-divtext">Sign In</span><div className="al-divline"/>
+                <div className="al-divline"/>
+                <span className="al-divtext">Sign In</span>
+                <div className="al-divline"/>
               </div>
 
               <div className="al-field">
@@ -264,7 +267,7 @@ export default function AdminLoginPage() {
                   <input
                     className="al-input"
                     type="email"
-                    placeholder="your-staff@email.com"
+                    placeholder="staff@pujasamagri.com"
                     value={email}
                     onChange={e => { setEmail(e.target.value); setError(''); }}
                     onKeyDown={e => e.key === 'Enter' && handleLogin()}
@@ -293,19 +296,22 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {error && <div className="al-error"><span>⚠️</span><span>{error}</span></div>}
+              {error && (
+                <div className="al-error">
+                  <span>⚠️</span><span>{error}</span>
+                </div>
+              )}
 
               <button className="al-btn" onClick={handleLogin} disabled={loading || success}>
                 <span className="al-btn-inner">
                   {loading
                     ? <><div className="al-spin"/> Verifying…</>
-                    : <>🔐 &nbsp;Enter Dashboard</>
-                  }
+                    : <>🔐 &nbsp;Enter Dashboard</>}
                 </span>
               </button>
 
               <p className="al-footer">
-                Not staff? <a href="/login">Customer login →</a>
+                Not staff? <Link href="/">Back to home →</Link>
               </p>
 
             </div>

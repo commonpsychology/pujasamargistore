@@ -11,26 +11,8 @@ export default function Home() {
   return (
     <div style={{ width: '100%' }}>
 
-      {/* ── DEMO LINK (remove when done) ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 24px 0' }}>
-        <a
-          href="/payment?orderId=DEMO1234&total=1500&name=Test+User&phone=9800000000&address=Thimi+Bhaktapur"
-          style={{
-            background: 'rgba(250,204,21,0.08)',
-            border: '1px dashed rgba(250,204,21,0.3)',
-            color: '#facc15',
-            padding: '8px 20px',
-            borderRadius: '999px',
-            fontSize: '12px',
-            fontWeight: 700,
-            textDecoration: 'none',
-            letterSpacing: '0.5px',
-          }}
-        >
-          💳 Preview Payment Page →
-        </a>
-      </div>
-
+    
+     
       {/* ── HERO SLIDER ── */}
       <HeroSlider />
 

@@ -19,6 +19,12 @@
 //   1. loading=true, sessionChecked=false  → show loading splash
 //   2. getSession() resolves with null     → sessionChecked=true, user=null
 //   3. loading=false                       → redirect to /login
+//
+// ADMIN ROUTES (/admin/*, /admin-login):
+//   Staff login uses a custom API (/api/admin/login) + sessionStorage.
+//   It does NOT create a Supabase auth session, so user=null for staff always.
+//   ConditionalShell must NOT touch /admin/* — those pages check sessionStorage
+//   themselves. Both /admin-login and /admin/* are in PUBLIC_ROUTES below.
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
@@ -26,10 +32,13 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import { useAuth } from '../context/AuthContext';
 
-// Always accessible without login
+// Always accessible without a Supabase login.
+// /admin and /admin-login are here because staff auth is handled
+// by each admin page via sessionStorage — NOT via Supabase auth.
 const PUBLIC_ROUTES = [
   '/login',
   '/admin-login',
+  '/admin',          // ← THIS is the fix — all /admin/* pages exempt
   '/register',
   '/forgot-password',
   '/about',
@@ -37,15 +46,17 @@ const PUBLIC_ROUTES = [
   '/policies',
 ];
 
-// Staff-only route prefixes
+// Staff-only route prefixes — REMOVED /admin from here.
+// Admin pages do their own sessionStorage check; Supabase JWT is not involved.
 const ROLE_PROTECTED = {
-  '/admin': ['admin', 'delivery', 'accounts'],
+  // '/admin': ['admin', 'delivery', 'accounts'],  // ← removed, handled by pages
 };
 
 // Full-screen pages — no Navbar/Footer
 const SHELL_HIDDEN = [
   '/login',
   '/admin-login',
+  '/admin',          // ← admin pages have their own layout (sidebar), no shell
   '/register',
   '/forgot-password',
 ];
@@ -68,6 +79,9 @@ export default function ConditionalShell({ children }) {
     const justLoggedOut = wasEverSet && prev !== null && user === null;
     prevUserRef.current = user;
 
+    // If admin route — do nothing. Admin pages handle their own auth.
+    if (isPublic) return;
+
     if (justLoggedOut) { router.replace('/login'); return; }
 
     if (!user && !isPublic) {
@@ -75,8 +89,7 @@ export default function ConditionalShell({ children }) {
       return;
     }
 
-    // /admin/* requires isStaff=true (from JWT app_metadata) + correct role
-    // Instant — no DB call needed. A customer JWT never has is_staff=true.
+    // Non-admin protected routes: check role via JWT
     if (user) {
       const matchedKey = Object.keys(ROLE_PROTECTED).find(k => pathname.startsWith(k));
       if (matchedKey) {
@@ -89,8 +102,8 @@ export default function ConditionalShell({ children }) {
   }, [sessionChecked, user, isStaff, quickRole, pathname, isPublic, router]);
 
   // ── Show loading splash until session is confirmed ───────────────────────
-  // This covers both loading=true AND the brief gap before sessionChecked
-  if (loading || !sessionChecked) {
+  // Skip the splash for admin routes — they have their own loading state
+  if ((loading || !sessionChecked) && !isPublic) {
     return (
       <div style={{
         position: 'fixed', inset: 0,
@@ -120,13 +133,13 @@ export default function ConditionalShell({ children }) {
     );
   }
 
-  // ── Full-screen pages (login/register/admin-login) — no shell ────────────
+  // ── Admin pages and full-screen pages — no Navbar/Footer ─────────────────
   if (hideShell) return <>{children}</>;
 
   // ── Unauthenticated on protected page — blank while redirect fires ────────
   if (!user && !isPublic) return null;
 
-  // ── Authenticated — render with Navbar + Footer ───────────────────────────
+  // ── Authenticated customer — render with Navbar + Footer ─────────────────
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#080d18' }}>
       <Navbar />

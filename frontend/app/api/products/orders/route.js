@@ -1,89 +1,155 @@
-// app/api/puja-orders/route.js
-// Saves puja booking orders to PostgreSQL
-// Table is auto-created on first request if it doesn't exist
-
+// app/api/orders/route.js
 import { NextResponse } from 'next/server';
+import { supabase, supabaseAdmin } from '../../../src/lib/supabaseClient';
 
-async function getPool() {
-  const { Pool } = await import('pg');
-  return new Pool({ connectionString: process.env.DATABASE_URL });
+function generateOrderRef() {
+  const ts  = Date.now().toString(36).toUpperCase();
+  const rnd = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `PS-${ts}-${rnd}`;
 }
 
-// Auto-create table if it doesn't exist
-async function ensureTable(pool) {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS puja_orders (
-      id            SERIAL PRIMARY KEY,
-      puja_id       INTEGER       NOT NULL,
-      puja_name     VARCHAR(200)  NOT NULL,
-      puja_name_ne  VARCHAR(200),
-      name          VARCHAR(200)  NOT NULL,
-      phone         VARCHAR(30)   NOT NULL,
-      location      TEXT          NOT NULL,
-      date          DATE          NOT NULL,
-      note          TEXT,
-      status        VARCHAR(50)   DEFAULT 'pending',
-      created_at    TIMESTAMPTZ   DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_puja_orders_status ON puja_orders(status);
-    CREATE INDEX IF NOT EXISTS idx_puja_orders_date   ON puja_orders(date);
-  `);
-}
-
-// POST /api/puja-orders — save a new booking
+// ── POST: Place a new order ───────────────────────────────────
 export async function POST(request) {
-  let pool;
   try {
     const body = await request.json();
-    const { puja_id, puja_name, puja_name_ne, name, phone, location, date, note } = body;
+    const {
+      cart,
+      cartTotal,
+      deliveryCharge,
+      grandTotal,
+      paymentMethod,   // 'online' | 'cod' (set by payment page later, default 'pending')
+      customerName,
+      customerPhone,
+      customerAddress,
+    } = body;
 
-    // Basic validation
-    if (!puja_id || !puja_name || !name?.trim() || !phone?.trim() || !location?.trim() || !date) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!customerName?.trim())    return NextResponse.json({ error: 'Name is required' },    { status: 400 });
+    if (!customerPhone?.trim())   return NextResponse.json({ error: 'Phone is required' },   { status: 400 });
+    if (!customerAddress?.trim()) return NextResponse.json({ error: 'Address is required' }, { status: 400 });
+    if (!cart?.length)            return NextResponse.json({ error: 'Cart is empty' },        { status: 400 });
+
+    const items = cart.map(({ product, qty, variant }) => ({
+      id:       product.id,
+      name:     product.name,
+      price:    product.price,
+      qty,
+      variant:  variant  ?? null,
+      category: product.category ?? null,
+    }));
+
+    const payment_reference = generateOrderRef();
+
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([{
+        customer_name:     customerName.trim(),
+        customer_phone:    customerPhone.trim(),
+        delivery_address:  customerAddress.trim(),
+        items,
+        subtotal:          cartTotal,
+        delivery_charge:   deliveryCharge,
+        total_amount:      grandTotal,
+        payment_method:    paymentMethod ?? 'pending',
+        payment_status:    'pending',
+        order_status:      'pending',
+        payment_reference,
+      }])
+      .select('id, created_at, payment_reference')
+      .single();
+
+    if (error) {
+      console.error('Order insert error:', error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    pool = await getPool();
-    await ensureTable(pool);
-
-    const { rows } = await pool.query(
-      `INSERT INTO puja_orders (puja_id, puja_name, puja_name_ne, name, phone, location, date, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, created_at`,
-      [puja_id, puja_name, puja_name_ne, name.trim(), phone.trim(), location.trim(), date, note?.trim() || null]
-    );
-
     return NextResponse.json({
-      success: true,
-      order_id: rows[0].id,
-      created_at: rows[0].created_at,
+      success:       true,
+      orderId:       data.id,
+      orderRef:      data.payment_reference,
+      totalAmount:   grandTotal,
+      paymentMethod: paymentMethod,
+      createdAt:     data.created_at,
     }, { status: 201 });
 
   } catch (err) {
-    console.error('puja-orders POST error:', err.message);
+    console.error('Orders POST error:', err.message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (pool) await pool.end().catch(() => {});
   }
 }
 
-// GET /api/puja-orders — list all orders (for admin use)
-export async function GET() {
-  let pool;
+// ── PATCH: Update payment method + status after user chooses ─
+// Called by payment page when user clicks "Confirm"
+export async function PATCH(request) {
   try {
-    pool = await getPool();
-    await ensureTable(pool);
+    const { id, orderRef, status, paymentMethod } = await request.json();
+    if (!id) return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
 
-    const { rows } = await pool.query(`
-      SELECT * FROM puja_orders
-      ORDER BY created_at DESC
-      LIMIT 200
-    `);
+    const updateData = {};
+    if (status)        updateData.payment_status = status;        // 'cod_pending' | 'payment_pending' | 'paid'
+    if (paymentMethod) updateData.payment_method = paymentMethod; // 'cod' | 'qr' | 'esewa' | 'khalti'
 
-    return NextResponse.json(rows);
+    // Auto-confirm order_status for COD
+    if (status === 'cod_pending' || status === 'paid') {
+      updateData.order_status = 'confirmed';
+    }
+
+    let query = supabaseAdmin.from('orders').update(updateData).eq('id', id);
+    // Also match orderRef if provided — double-checks it's the right order
+    if (orderRef) query = query.eq('payment_reference', orderRef);
+
+    const { error } = await query;
+    if (error) throw error;
+
+    // If COD, also insert into cod_orders table
+    if (paymentMethod === 'cod') {
+      // Fetch the full order to copy into cod_orders
+      const { data: order } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (order) {
+        const { error: codErr } = await supabaseAdmin
+          .from('cod_orders')
+          .insert([{
+            order_id:         order.id,
+            customer_name:    order.customer_name,
+            customer_phone:   order.customer_phone,
+            delivery_address: order.delivery_address,
+            items:            order.items,
+            total_amount:     order.total_amount,
+            status:           'pending',
+          }]);
+        if (codErr) console.error('COD insert error (non-fatal):', codErr.message);
+      }
+    }
+
+    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('puja-orders GET error:', err.message);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (pool) await pool.end().catch(() => {});
+    console.error('Orders PATCH error:', err.message);
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
   }
+}
+
+// ── GET: All orders (admin) ───────────────────────────────────
+export async function GET() {
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: 'Admin client not configured. Add SUPABASE_SERVICE_ROLE_KEY to .env.local' },
+      { status: 503 }
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Orders GET error:', error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data ?? []);
 }

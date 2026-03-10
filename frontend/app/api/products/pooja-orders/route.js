@@ -1,110 +1,93 @@
 // app/api/puja-orders/route.js
-// Handles puja samagri kit orders AND cheena (birth chart) orders
-// Tables are auto-created on first request
-
+// Uses Supabase (NOT pg — pg is uninstalled)
 import { NextResponse } from 'next/server';
+import { supabase, supabaseAdmin } from '../../../src/lib/supabaseClient';
 
-async function getPool() {
-  const { Pool } = await import('pg');
-  return new Pool({ connectionString: process.env.DATABASE_URL });
-}
-
-async function ensureTables(pool) {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS puja_orders (
-      id            SERIAL PRIMARY KEY,
-      puja_id       VARCHAR(100)  NOT NULL,
-      puja_name     VARCHAR(200)  NOT NULL,
-      puja_name_ne  VARCHAR(200),
-      items         JSONB,
-      total_price   INTEGER,
-      name          VARCHAR(200)  NOT NULL,
-      phone         VARCHAR(30)   NOT NULL,
-      location      TEXT          NOT NULL,
-      date          DATE          NOT NULL,
-      note          TEXT,
-      status        VARCHAR(50)   DEFAULT 'pending',
-      created_at    TIMESTAMPTZ   DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_puja_orders_status ON puja_orders(status);
-    CREATE INDEX IF NOT EXISTS idx_puja_orders_date   ON puja_orders(date);
-
-    CREATE TABLE IF NOT EXISTS cheena_orders (
-      id            SERIAL PRIMARY KEY,
-      cheena_type   VARCHAR(50)   NOT NULL,
-      cheena_name   VARCHAR(200)  NOT NULL,
-      price         INTEGER       NOT NULL,
-      name          VARCHAR(200)  NOT NULL,
-      nwaran_name   VARCHAR(200),
-      dob           DATE          NOT NULL,
-      tob           VARCHAR(20),
-      pob           TEXT,
-      phone         VARCHAR(30)   NOT NULL,
-      message       TEXT,
-      status        VARCHAR(50)   DEFAULT 'pending',
-      created_at    TIMESTAMPTZ   DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_cheena_orders_status ON cheena_orders(status);
-  `);
-}
-
-// POST /api/puja-orders — save a new puja samagri kit order
+// ── POST: Save a new puja booking ────────────────────────────
 export async function POST(request) {
-  let pool;
   try {
     const body = await request.json();
     const { puja_id, puja_name, puja_name_ne, items, total_price, name, phone, location, date, note } = body;
 
     if (!puja_id || !puja_name || !name?.trim() || !phone?.trim() || !location?.trim() || !date) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required fields: puja_id, puja_name, name, phone, location, date' },
+        { status: 400 }
+      );
     }
 
-    pool = await getPool();
-    await ensureTables(pool);
+    const { data, error } = await supabase
+      .from('puja_orders')
+      .insert([{
+        puja_id,
+        puja_name,
+        puja_name_ne: puja_name_ne || null,
+        items:        items        || null,
+        total_price:  total_price  || null,
+        name:         name.trim(),
+        phone:        phone.trim(),
+        location:     location.trim(),
+        date,
+        note:         note?.trim() || null,
+        status:       'pending',
+      }])
+      .select('id, created_at')
+      .single();
 
-    const { rows } = await pool.query(
-      `INSERT INTO puja_orders
-         (puja_id, puja_name, puja_name_ne, items, total_price, name, phone, location, date, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-       RETURNING id, created_at`,
-      [
-        puja_id, puja_name, puja_name_ne,
-        items ? JSON.stringify(items) : null,
-        total_price || null,
-        name.trim(), phone.trim(), location.trim(), date,
-        note?.trim() || null,
-      ]
-    );
+    if (error) {
+      console.error('Puja order insert error:', error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-    return NextResponse.json({ success: true, order_id: rows[0].id, created_at: rows[0].created_at }, { status: 201 });
+    return NextResponse.json({ success: true, order_id: data.id, created_at: data.created_at }, { status: 201 });
+
   } catch (err) {
-    console.error('puja-orders POST error:', err.message);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (pool) await pool.end().catch(() => {});
+    console.error('Puja-orders POST error:', err.message);
+    return NextResponse.json({ error: 'Failed to save booking. Please try again.' }, { status: 500 });
   }
 }
 
-// GET /api/puja-orders — list all orders (both puja & cheena, for admin)
-export async function GET() {
-  let pool;
+// ── GET: All puja + cheena orders for admin ───────────────────
+// Use ?type=all to get both merged, or omit for puja only
+export async function GET(request) {
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: 'Admin client not configured. Add SUPABASE_SERVICE_ROLE_KEY to .env.local' },
+      { status: 503 }
+    );
+  }
+
   try {
-    pool = await getPool();
-    await ensureTables(pool);
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
 
-    const [pujaResult, cheenaResult] = await Promise.all([
-      pool.query(`SELECT *, 'puja' AS order_type FROM puja_orders ORDER BY created_at DESC LIMIT 300`),
-      pool.query(`SELECT *, 'cheena' AS order_type FROM cheena_orders ORDER BY created_at DESC LIMIT 300`),
-    ]);
+    if (type === 'all') {
+      const [pujaRes, cheenaRes] = await Promise.all([
+        supabaseAdmin.from('puja_orders').select('*').order('created_at', { ascending: false }),
+        supabaseAdmin.from('cheena_orders').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (pujaRes.error)   throw pujaRes.error;
+      if (cheenaRes.error) throw cheenaRes.error;
 
-    return NextResponse.json({
-      puja_orders:   pujaResult.rows,
-      cheena_orders: cheenaResult.rows,
-    });
+      const puja   = (pujaRes.data   || []).map(o => ({ ...o, order_type: 'puja'   }));
+      const cheena = (cheenaRes.data || []).map(o => ({ ...o, order_type: 'cheena' }));
+      const merged = [...puja, ...cheena].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+      return NextResponse.json(merged);
+    }
+
+    // Default: puja orders only
+    const { data, error } = await supabaseAdmin
+      .from('puja_orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return NextResponse.json(data ?? []);
+
   } catch (err) {
-    console.error('puja-orders GET error:', err.message);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    if (pool) await pool.end().catch(() => {});
+    console.error('Puja-orders GET error:', err.message);
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
   }
 }
