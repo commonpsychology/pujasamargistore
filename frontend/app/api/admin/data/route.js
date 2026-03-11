@@ -1,106 +1,100 @@
-// app/api/admin/data/route.js
-//
-// Single endpoint that returns all admin data.
-// GET /api/admin/data?table=orders|bookings|messages|all
-// Uses supabaseAdmin (service role) — bypasses RLS entirely.
-
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '../../../../src/lib/supabaseClient';
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+);
+
+const TABLE_MAP = {
+  orders: 'orders',
+  puja_orders: 'puja_orders',
+  bookings: 'puja_orders',
+  cheena_orders: 'cheena_orders',
+  cod_orders: 'cod_orders',
+  contact_messages: 'contact_messages',
+  messages: 'contact_messages',
+  newsletter_subscribers: 'newsletter_subscribers',
+  newsletter: 'newsletter_subscribers',
+};
 
 export async function GET(request) {
-  const supabaseAdmin = getSupabaseAdmin();
-  if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Admin client not configured' }, { status: 503 });
+  const { searchParams } = new URL(request.url);
+  const tableKey = searchParams.get('table');
+  const table = TABLE_MAP[tableKey];
+
+  if (!table) {
+    return NextResponse.json(
+      { error: 'Invalid table: ' + tableKey },
+      { status: 400 }
+    );
   }
 
-  const { searchParams } = new URL(request.url);
-  const table = searchParams.get('table') || 'all';
-
   try {
-    const result = {};
-
-    // ── Shop Orders ──────────────────────────────────────────
-    if (table === 'all' || table === 'orders') {
-      const { data, error } = await supabaseAdmin
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(`orders: ${error.message}`);
-      result.orders = data ?? [];
+    if (tableKey === 'messages') {
+      const [contacts, newsletter, cheena] = await Promise.all([
+        supabaseAdmin.from('contact_messages').select('*').order('created_at', { ascending: false }),
+        supabaseAdmin.from('newsletter_subscribers').select('*').order('subscribed_at', { ascending: false }),
+        supabaseAdmin.from('cheena_orders').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (contacts.error) throw contacts.error;
+      if (newsletter.error) throw newsletter.error;
+      if (cheena.error) throw cheena.error;
+      return NextResponse.json({
+        contact_messages: contacts.data ?? [],
+        newsletter_subscribers: newsletter.data ?? [],
+        cheena_orders: cheena.data ?? [],
+      });
     }
 
-    // ── Puja Orders ──────────────────────────────────────────
-    if (table === 'all' || table === 'bookings') {
-      const { data: puja, error: pe } = await supabaseAdmin
-        .from('puja_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (pe) throw new Error(`puja_orders: ${pe.message}`);
+    const { data, error } = await supabaseAdmin
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      const { data: cheena, error: ce } = await supabaseAdmin
-        .from('cheena_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (ce) throw new Error(`cheena_orders: ${ce.message}`);
+    if (error) throw error;
 
-      result.puja_orders   = puja   ?? [];
-      result.cheena_orders = cheena ?? [];
+    const response = { data: data };
+    response[table] = data;
+    if (tableKey !== table) {
+      response[tableKey] = data;
     }
-
-    // ── Messages & Newsletter ────────────────────────────────
-    if (table === 'all' || table === 'messages') {
-      const { data: contacts, error: cErr } = await supabaseAdmin
-        .from('contact_messages')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (cErr) throw new Error(`contact_messages: ${cErr.message}`);
-
-      const { data: newsletter, error: nErr } = await supabaseAdmin
-        .from('newsletter_subscribers')
-        .select('*');
-      if (nErr) throw new Error(`newsletter_subscribers: ${nErr.message}`);
-
-      result.contact_messages       = contacts    ?? [];
-      result.newsletter_subscribers = newsletter  ?? [];
-    }
-
-    return NextResponse.json(result);
+    return NextResponse.json(response);
 
   } catch (err) {
-    console.error('Admin data fetch error:', err.message);
+    console.error('admin/data GET error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// PATCH /api/admin/data — update order_status or read status
 export async function PATCH(request) {
-  const supabaseAdmin = getSupabaseAdmin();
-  if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Admin client not configured' }, { status: 503 });
-  }
-
   try {
-    const { table, id, updates } = await request.json();
+    const body = await request.json();
+    const tableKey = body.table;
+    const id = body.id;
+    const updates = body.updates;
+    const table = TABLE_MAP[tableKey];
 
-    if (!table || !id || !updates) {
-      return NextResponse.json({ error: 'table, id, and updates are required' }, { status: 400 });
+    if (!table) {
+      return NextResponse.json({ error: 'Invalid table: ' + tableKey }, { status: 400 });
+    }
+    if (!id || !updates || typeof updates !== 'object') {
+      return NextResponse.json({ error: 'Missing id or updates' }, { status: 400 });
     }
 
-    const allowed = ['orders', 'puja_orders', 'cheena_orders', 'contact_messages'];
-    if (!allowed.includes(table)) {
-      return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
-    }
-
-    const { error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from(table)
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select()
+      .single();
 
     if (error) throw error;
+    return NextResponse.json({ success: true, data: data });
 
-    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Admin PATCH error:', err.message);
+    console.error('admin/data PATCH error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

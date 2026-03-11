@@ -1,5 +1,4 @@
 'use client';
-
 // src/components/ReviewsSlider.js
 
 import { useState, useEffect, useCallback } from 'react';
@@ -68,43 +67,42 @@ function StarRating({ count }) {
   );
 }
 
-function ReviewCard({ review, isActive, position }) {
-  // position: 'center' | 'left' | 'right' | 'hidden'
+function ReviewCard({ review, position }) {
   const transforms = {
     center: 'translateX(0) scale(1)',
-    left:   'translateX(-110%) scale(0.88)',
-    right:  'translateX(110%) scale(0.88)',
+    left:   'translateX(-108%) scale(0.88)',
+    right:  'translateX(108%) scale(0.88)',
     hidden: 'translateX(0) scale(0.7)',
   };
-  const opacities = { center: 1, left: 0.45, right: 0.45, hidden: 0 };
+  const opacities = { center: 1, left: 0, right: 0, hidden: 0 };
   const zIndexes  = { center: 10, left: 5, right: 5, hidden: 0 };
 
   return (
     <div style={{
       position: 'absolute',
       top: 0,
-      left: '50%',
-      marginLeft: '-280px',
-      width: '560px',
-      maxWidth: 'calc(100vw - 80px)',
+      left: 0,
+      width: '100%',
       transform: transforms[position] || transforms.hidden,
       opacity: opacities[position] ?? 0,
       zIndex: zIndexes[position] ?? 0,
       transition: 'all 0.55s cubic-bezier(0.4, 0, 0.2, 1)',
       pointerEvents: position === 'center' ? 'auto' : 'none',
+      padding: '0 2px',
     }}>
       <div style={{
         background: 'linear-gradient(145deg, #27272a, #1f1f22)',
         border: '1px solid #3f3f46',
         borderRadius: '20px',
-        padding: '36px 40px 32px',
+        /* FIX: responsive padding */
+        padding: 'clamp(20px, 5vw, 36px) clamp(18px, 5vw, 40px) clamp(18px, 4vw, 32px)',
         boxShadow: position === 'center'
           ? '0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(250,204,21,0.08)'
           : '0 8px 20px rgba(0,0,0,0.3)',
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Subtle gold glow top-right */}
+        {/* Gold glow */}
         <div style={{
           position: 'absolute', top: 0, right: 0,
           width: '120px', height: '120px',
@@ -114,19 +112,19 @@ function ReviewCard({ review, isActive, position }) {
 
         {/* Quote mark */}
         <div style={{
-          position: 'absolute', top: '16px', left: '28px',
-          fontSize: '72px', color: 'rgba(250,204,21,0.08)',
+          position: 'absolute', top: '12px', left: '20px',
+          fontSize: '64px', color: 'rgba(250,204,21,0.08)',
           fontFamily: 'Georgia, serif', lineHeight: 1,
           userSelect: 'none', pointerEvents: 'none',
         }}>
           &ldquo;
         </div>
 
-        {/* Header: avatar + name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-          {/* Round avatar frame */}
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          {/* Avatar */}
           <div style={{
-            width: '56px', height: '56px', flexShrink: 0,
+            width: '52px', height: '52px', flexShrink: 0,
             borderRadius: '50%',
             border: '2px solid #facc15',
             boxShadow: '0 0 12px rgba(250,204,21,0.3)',
@@ -137,27 +135,26 @@ function ReviewCard({ review, isActive, position }) {
             <Image
               src={review.avatar}
               alt={review.name}
-              width={56}
-              height={56}
+              width={52}
+              height={52}
               unoptimized
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               onError={e => {
                 e.target.style.display = 'none';
-                e.target.parentNode.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;background:#292524">🙏</div>`;
+                e.target.parentNode.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;background:#292524">🙏</div>`;
               }}
             />
           </div>
 
+          {/* Name + location + stars */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '15px' }}>{review.name}</div>
             <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>📍 {review.location}</div>
             <StarRating count={review.rating} />
           </div>
 
-          <div style={{
-            flexShrink: 0, textAlign: 'right',
-            color: '#64748b', fontSize: '11px', lineHeight: 1.5,
-          }}>
+          {/* Product badge + date */}
+          <div style={{ flexShrink: 0, textAlign: 'right' }}>
             <div style={{
               display: 'inline-block',
               background: 'rgba(250,204,21,0.08)',
@@ -167,6 +164,10 @@ function ReviewCard({ review, isActive, position }) {
               color: '#facc15',
               fontSize: '10px', fontWeight: 600,
               marginBottom: '4px',
+              /* FIX: allow wrapping on very small screens */
+              whiteSpace: 'normal',
+              maxWidth: '120px',
+              textAlign: 'right',
             }}>
               {review.product}
             </div>
@@ -181,17 +182,14 @@ function ReviewCard({ review, isActive, position }) {
           lineHeight: 1.75,
           fontStyle: 'italic',
           margin: 0,
-          paddingTop: '4px',
+          paddingTop: '12px',
           borderTop: '1px solid #2e2e32',
         }}>
           &ldquo;{review.text}&rdquo;
         </p>
 
-        {/* Verified badge */}
-        <div style={{
-          marginTop: '16px',
-          display: 'flex', alignItems: 'center', gap: '5px',
-        }}>
+        {/* Verified */}
+        <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
           <span style={{
             width: '16px', height: '16px', borderRadius: '50%',
             background: '#22c55e',
@@ -208,6 +206,7 @@ function ReviewCard({ review, isActive, position }) {
 export default function ReviewsSlider() {
   const [current, setCurrent] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [cardHeight, setCardHeight] = useState(300);
   const total = REVIEWS.length;
 
   const goTo = useCallback((idx) => {
@@ -220,11 +219,24 @@ export default function ReviewsSlider() {
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
 
-  // Auto-slide every 5s
   useEffect(() => {
     const t = setInterval(next, 5000);
     return () => clearInterval(t);
   }, [next]);
+
+  // Dynamically measure card height so the slider container is always tall enough
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      // Rough responsive height estimates
+      if (w < 400) setCardHeight(360);
+      else if (w < 640) setCardHeight(320);
+      else setCardHeight(280);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const getPosition = (idx) => {
     if (idx === current) return 'center';
@@ -237,10 +249,12 @@ export default function ReviewsSlider() {
     <section style={{
       maxWidth: '1400px',
       margin: '0 auto',
-      padding: '60px 24px 80px',
+      padding: '60px 0 80px',
+      /* FIX: prevent this section from causing horizontal scroll */
+      overflow: 'hidden',
     }}>
-      {/* Section header */}
-      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '48px', padding: '0 24px' }}>
         <p style={{
           fontSize: '11px', fontWeight: 700,
           letterSpacing: '3px', color: '#facc15',
@@ -259,7 +273,6 @@ export default function ReviewsSlider() {
           Real reviews from our devotees across the Kathmandu Valley
         </p>
 
-        {/* Star summary */}
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '8px',
           marginTop: '16px',
@@ -274,27 +287,30 @@ export default function ReviewsSlider() {
         </div>
       </div>
 
-      {/* Slider */}
-      <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
-        {REVIEWS.map((review, idx) => (
-          <ReviewCard
-            key={review.id}
-            review={review}
-            isActive={idx === current}
-            position={getPosition(idx)}
-          />
-        ))}
+      {/* Slider area */}
+      <div style={{ position: 'relative', padding: '0 16px' }}>
+        {/* overflow:hidden clips side-cards so they never cause horizontal scroll */}
+        <div style={{ position: 'relative', height: `${cardHeight}px`, overflow: 'hidden', margin: '0 32px' }}>
+          {REVIEWS.map((review, idx) => (
+            <ReviewCard
+              key={review.id}
+              review={review}
+              position={getPosition(idx)}
+            />
+          ))}
+        </div>
 
-        {/* Arrows */}
+        {/* Prev arrow */}
         <button
           onClick={prev}
+          aria-label="Previous review"
           style={{
             position: 'absolute', left: '0', top: '50%',
             transform: 'translateY(-50%)',
             zIndex: 20,
-            width: '40px', height: '40px',
+            width: '36px', height: '36px',
             borderRadius: '50%',
-            background: 'rgba(39,39,42,0.9)',
+            background: 'rgba(39,39,42,0.95)',
             border: '1px solid #3f3f46',
             color: '#f1f5f9', fontSize: '20px',
             cursor: 'pointer',
@@ -302,21 +318,21 @@ export default function ReviewsSlider() {
             transition: 'border-color 0.2s, background 0.2s',
             backdropFilter: 'blur(4px)',
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#facc15'; e.currentTarget.style.background = '#1c1c1e'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#3f3f46'; e.currentTarget.style.background = 'rgba(39,39,42,0.9)'; }}
-          aria-label="Previous review"
         >
           ‹
         </button>
+
+        {/* Next arrow */}
         <button
           onClick={next}
+          aria-label="Next review"
           style={{
             position: 'absolute', right: '0', top: '50%',
             transform: 'translateY(-50%)',
             zIndex: 20,
-            width: '40px', height: '40px',
+            width: '36px', height: '36px',
             borderRadius: '50%',
-            background: 'rgba(39,39,42,0.9)',
+            background: 'rgba(39,39,42,0.95)',
             border: '1px solid #3f3f46',
             color: '#f1f5f9', fontSize: '20px',
             cursor: 'pointer',
@@ -324,15 +340,12 @@ export default function ReviewsSlider() {
             transition: 'border-color 0.2s, background 0.2s',
             backdropFilter: 'blur(4px)',
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#facc15'; e.currentTarget.style.background = '#1c1c1e'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#3f3f46'; e.currentTarget.style.background = 'rgba(39,39,42,0.9)'; }}
-          aria-label="Next review"
         >
           ›
         </button>
       </div>
 
-      {/* Dot indicators */}
+      {/* Dots */}
       <div style={{
         display: 'flex', justifyContent: 'center',
         gap: '8px', marginTop: '28px',
@@ -341,6 +354,7 @@ export default function ReviewsSlider() {
           <button
             key={idx}
             onClick={() => goTo(idx)}
+            aria-label={`Review ${idx + 1}`}
             style={{
               width: idx === current ? '24px' : '8px',
               height: '8px',
@@ -351,7 +365,6 @@ export default function ReviewsSlider() {
               transition: 'all 0.3s ease',
               padding: 0,
             }}
-            aria-label={`Review ${idx + 1}`}
           />
         ))}
       </div>

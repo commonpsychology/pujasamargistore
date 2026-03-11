@@ -6,6 +6,25 @@
 /* =====================
    DESIGN TOKENS
 ===================== */
+
+/* ── Prevent horizontal scroll on mobile ── */
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
+}
+
+body > * {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* ... rest of your existing globals.css below ... */
 :root {
   --bg-main: #1c1c1e;
   --card-bg: rgba(36, 36, 40, 0.92);

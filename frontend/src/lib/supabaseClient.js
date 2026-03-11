@@ -51,8 +51,13 @@ export const supabase = getSupabaseClient();
 let _adminClient = null;
 
 export function getSupabaseAdmin() {
+  // This function is server-only. The key is intentionally absent in the
+  // browser — Next.js strips non-NEXT_PUBLIC_ vars for security.
+  // Only warn on the server where the key should actually be present.
   if (!SUPABASE_SERVICE_KEY) {
-    console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY is not set in .env.local');
+    if (typeof window === 'undefined') {
+      console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY is not set in .env.local');
+    }
     return null;
   }
   if (_adminClient) return _adminClient;

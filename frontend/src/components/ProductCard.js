@@ -9,7 +9,6 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
 
-  // Safely resolve image — handles: image_url string, images array, or nothing
   const imageSrc =
     product.image_url ||
     (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null);
@@ -94,7 +93,6 @@ export default function ProductCard({ product }) {
             <span>{product.emoji || '🪔'}</span>
           )}
 
-          {/* Badge */}
           {product.badge && (
             <div style={{
               position: 'absolute',

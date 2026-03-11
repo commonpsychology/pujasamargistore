@@ -1,33 +1,27 @@
 // app/layout.js
-// Added AuthProvider wrapping CartProvider so auth is available everywhere
+// Simple non-async server component — no headers() needed.
+// ShellLayout (client) handles the conditional Navbar/Footer logic.
 
 import './globals.css';
+import ShellLayout from '../src/components/ShellLayout';
 import { CartProvider } from '../src/context/CartContext';
-import { AuthProvider }  from '../src/context/AuthContext';
-import ConditionalShell  from '../src/components/ConditionalShell';
+import { AuthProvider } from '../src/context/AuthContext';
+import { LangProvider } from '../src/context/LangContext';
 
 export const metadata = {
-  title: 'पूजा सामग्री — पण्डित पुष्कर राज न्यौपाने',
-  description: 'Authentic pooja essentials and festive kits from Thimi, Bhaktapur.',
+  title:       'पूजा सामग्री — Puja Samagri',
+  description: 'Authentic Nepali puja samagri — Bhaktapur, Thimi',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="ne">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="min-h-screen flex flex-col">
+      <body>
         <AuthProvider>
           <CartProvider>
-            <ConditionalShell>
-              {children}
-            </ConditionalShell>
+            <LangProvider>
+              <ShellLayout>{children}</ShellLayout>
+            </LangProvider>
           </CartProvider>
         </AuthProvider>
       </body>

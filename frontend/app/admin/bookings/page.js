@@ -1,6 +1,6 @@
 'use client';
 // app/admin/bookings/page.js
-// Shows puja_orders + cheena_orders combined.
+// Shows puja_orders only.
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,11 +48,9 @@ function Loading() {
 }
 
 function BookingsDashboard() {
-  const [pujaOrders,   setPujaOrders]   = useState([]);
-  const [cheenaOrders, setCheenaOrders] = useState([]);
+  const [pujaOrders, setPujaOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
-  const [tab,     setTab]     = useState('all');
   const [statusF, setStatusF] = useState('all');
   const [search,  setSearch]  = useState('');
   const [expanded,setExpanded]= useState(null);
@@ -60,56 +58,46 @@ function BookingsDashboard() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const res = await fetch('/api/admin/data?table=bookings');
+      const res = await fetch('/api/admin/data?table=puja_orders');
       if (!res.ok) throw new Error('Failed');
       const json = await res.json();
-      setPujaOrders(json.puja_orders ?? []);
-      setCheenaOrders(json.cheena_orders ?? []);
+      setPujaOrders(json.puja_orders ?? json.data ?? []);
     } catch { setError('Failed to load bookings.'); }
     finally  { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const updateStatus = async (table, id, status) => {
+  const updateStatus = async (id, status) => {
     try {
       await fetch('/api/admin/data', {
         method:'PATCH', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ table, id, updates:{ status } }),
+        body: JSON.stringify({ table:'puja_orders', id, updates:{ status } }),
       });
-      if (table === 'puja_orders')   setPujaOrders(  prev => prev.map(o => o.id===id ? {...o,status} : o));
-      if (table === 'cheena_orders') setCheenaOrders(prev => prev.map(o => o.id===id ? {...o,status} : o));
+      setPujaOrders(prev => prev.map(o => o.id===id ? {...o,status} : o));
     } catch {}
   };
 
-  const all = useMemo(() => {
-    const p = pujaOrders.map(o   => ({...o, _type:'puja'}));
-    const c = cheenaOrders.map(o => ({...o, _type:'cheena'}));
-    return [...p,...c].sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
-  }, [pujaOrders, cheenaOrders]);
-
   const filtered = useMemo(() => {
-    let list = all;
-    if (tab !== 'all')     list = list.filter(o => o._type === tab);
+    let list = pujaOrders;
     if (statusF !== 'all') list = list.filter(o => o.status === statusF);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(o =>
-        o.name?.toLowerCase().includes(q) || o.phone?.includes(q) ||
-        (o.puja_name||o.cheena_name||'').toLowerCase().includes(q)
+        o.name?.toLowerCase().includes(q) ||
+        o.phone?.includes(q) ||
+        o.puja_name?.toLowerCase().includes(q)
       );
     }
     return list;
-  }, [all, tab, statusF, search]);
+  }, [pujaOrders, statusF, search]);
 
   const stats = useMemo(() => ({
-    total:    all.length,
-    puja:     all.filter(o=>o._type==='puja').length,
-    cheena:   all.filter(o=>o._type==='cheena').length,
-    pending:  all.filter(o=>o.status==='pending').length,
-    confirmed:all.filter(o=>o.status==='confirmed').length,
-    completed:all.filter(o=>o.status==='completed').length,
-  }), [all]);
+    total:    pujaOrders.length,
+    pending:  pujaOrders.filter(o=>o.status==='pending').length,
+    confirmed:pujaOrders.filter(o=>o.status==='confirmed').length,
+    completed:pujaOrders.filter(o=>o.status==='completed').length,
+  }), [pujaOrders]);
 
   return (
     <>
@@ -119,15 +107,15 @@ function BookingsDashboard() {
         <div className="bk-header">
           <div>
             <p className="bk-eye">Bookings</p>
-            <h1 className="bk-title">Puja & Cheena Orders</h1>
+            <h1 className="bk-title">Puja Orders</h1>
           </div>
           <button className="bk-refresh" onClick={load}>↺ Refresh</button>
         </div>
 
         {!loading && !error && (
           <div className="bk-stats">
-            {[['Total',stats.total],['Puja',stats.puja,'orange'],['Cheena',stats.cheena,'amber'],
-              ['Pending',stats.pending,'gold'],['Confirmed',stats.confirmed,'green'],['Completed',stats.completed,'indigo']
+            {[['Total',stats.total],['Pending',stats.pending,'gold'],
+              ['Confirmed',stats.confirmed,'green'],['Completed',stats.completed,'indigo']
             ].map(([l,v,c]) => (
               <div key={l} className="bk-stat">
                 <div className="bk-sl">{l}</div>
@@ -149,12 +137,6 @@ function BookingsDashboard() {
           </select>
         </div>
 
-        <div className="bk-tabs">
-          {[['all','🙏 All'],['puja','🪔 Puja'],['cheena','✨ Cheena']].map(([v,l]) => (
-            <button key={v} className={`bk-tab${tab===v?' active':''}`} onClick={()=>setTab(v)}>{l}</button>
-          ))}
-        </div>
-
         {loading && <State spinner>Loading bookings…</State>}
         {error   && <State emoji="⚠️">{error}</State>}
         {!loading && !error && filtered.length===0 && <State emoji="📭">No bookings found.</State>}
@@ -164,23 +146,18 @@ function BookingsDashboard() {
             <p className="bk-count">{filtered.length} booking{filtered.length!==1?'s':''}</p>
             <div className="bk-list">
               {filtered.map((o,i) => {
-                const key    = `${o._type}-${o.id}`;
-                const isOpen = expanded === key;
-                const isPuja = o._type === 'puja';
+                const isOpen = expanded === o.id;
                 const sc     = STATUS_COLORS[o.status] || STATUS_COLORS.pending;
-                const price  = isPuja ? (o.total_price?`Rs. ${o.total_price.toLocaleString()}`:'—') : `Rs. ${(o.price||0).toLocaleString()}`;
-                const table  = isPuja ? 'puja_orders' : 'cheena_orders';
 
                 return (
-                  <div key={key} className={`bk-card ${isPuja?'puja':'cheena'}`} style={{animationDelay:`${i*0.02}s`}}>
-                    <div className="bk-ch" onClick={()=>setExpanded(isOpen?null:key)}>
-                      <span className={`bk-badge ${isPuja?'puja':'cheena'}`}>{isPuja?'🪔 Puja':'✨ Cheena'}</span>
+                  <div key={o.id} className="bk-card" style={{animationDelay:`${i*0.02}s`}}>
+                    <div className="bk-ch" onClick={()=>setExpanded(isOpen?null:o.id)}>
                       <div className="bk-cm">
                         <div className="bk-cn">{o.name}</div>
-                        <div className="bk-cs">{isPuja?o.puja_name:o.cheena_name} · {o.phone}</div>
+                        <div className="bk-cs">{o.puja_name} · {o.phone}</div>
                       </div>
                       <div className="bk-cr">
-                        <span className="bk-price">{price}</span>
+                        <span className="bk-price">{o.total_price ? `Rs. ${o.total_price.toLocaleString()}` : '—'}</span>
                         <span className="bk-pill" style={{background:sc.bg,border:`1px solid ${sc.border}`,color:sc.text}}>{o.status}</span>
                         <span className="bk-time">{fmtT(o.created_at)}</span>
                       </div>
@@ -191,35 +168,27 @@ function BookingsDashboard() {
                       <div className="bk-detail">
                         <DG l="Full Name">{o.name}</DG>
                         <DG l="Phone"><a href={`tel:${o.phone}`} style={{color:'#22c55e',textDecoration:'none'}}>{o.phone}</a></DG>
-                        {isPuja ? (<>
-                          <DG l="Puja">{o.puja_name}{o.puja_name_ne?` (${o.puja_name_ne})`:''}</DG>
-                          <DG l="Date">{fmt(o.date)}</DG>
-                          <DG l="Location" full>{o.location}</DG>
-                          {o.note && <DG l="Note" full>{o.note}</DG>}
-                          {Array.isArray(o.items)&&o.items.length>0&&(
-                            <div className="bk-items">
-                              <div className="bk-il">Kit Items ({o.items.length})</div>
-                              {o.items.map((it,idx)=>(
-                                <div key={idx} className="bk-ir">
-                                  <span>{it.name} × {it.qty} {it.unit}</span>
-                                  <span className="bk-ip">Rs. {((it.price||0)*(it.qty||1)).toLocaleString()}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </>) : (<>
-                          <DG l="Cheena Type">{o.cheena_name} — Rs. {(o.price||0).toLocaleString()}</DG>
-                          <DG l="Date of Birth">{fmt(o.dob)}</DG>
-                          {o.tob && <DG l="Time of Birth">{o.tob}</DG>}
-                          {o.pob && <DG l="Place of Birth">{o.pob}</DG>}
-                          {o.nwaran_name && <DG l="Nwaran Name">{o.nwaran_name}</DG>}
-                          {o.message && <DG l="Message" full>{o.message}</DG>}
-                        </>)}
+                        <DG l="Puja">{o.puja_name}{o.puja_name_ne?` (${o.puja_name_ne})`:''}</DG>
+                        <DG l="Date">{fmt(o.date)}</DG>
+                        <DG l="Location" full>{o.location}</DG>
+                        {o.note && <DG l="Note" full>{o.note}</DG>}
+
+                        {Array.isArray(o.items) && o.items.length > 0 && (
+                          <div className="bk-items">
+                            <div className="bk-il">Kit Items ({o.items.length})</div>
+                            {o.items.map((it,idx) => (
+                              <div key={idx} className="bk-ir">
+                                <span>{it.name} × {it.qty} {it.unit}</span>
+                                <span className="bk-ip">Rs. {((it.price||0)*(it.qty||1)).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="bk-changer">
                           <span className="bk-cl">Status</span>
                           <select className="bk-csel" value={o.status}
-                            onChange={e=>updateStatus(table,o.id,e.target.value)}>
+                            onChange={e=>updateStatus(o.id,e.target.value)}>
                             <option value="pending">Pending</option>
                             <option value="confirmed">Confirmed</option>
                             <option value="completed">Completed</option>
@@ -256,7 +225,7 @@ function State({children,emoji,spinner}){
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=DM+Sans:wght@400;600;800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  :root{--gold:#facc15;--green:#22c55e;--orange:#f97316;--amber:#fbbf24;--indigo:#818cf8;
+  :root{--gold:#facc15;--green:#22c55e;--indigo:#818cf8;
     --bg:#080d18;--surface:#0c1220;--surface2:#111827;--border:#1a2540;--border2:#1e293b;--muted:#475569;--text:#f1f5f9;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
   @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -272,27 +241,18 @@ const STYLES = `
   .bk-stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
   .bk-sl{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
   .bk-sv{font-size:26px;font-weight:800;color:var(--text);line-height:1;}
-  .bk-sv.gold{color:var(--gold);}.bk-sv.green{color:var(--green);}.bk-sv.orange{color:var(--orange);}.bk-sv.amber{color:var(--amber);}.bk-sv.indigo{color:var(--indigo);}
-  .bk-controls{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .bk-sv.gold{color:var(--gold);}.bk-sv.green{color:var(--green);}.bk-sv.indigo{color:var(--indigo);}
+  .bk-controls{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .bk-search{flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;}
   .bk-search:focus{border-color:rgba(250,204,21,0.35);}
   .bk-search::placeholder{color:#334155;}
   .bk-sel{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;}
-  .bk-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .bk-tab{padding:8px 18px;border-radius:999px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;}
-  .bk-tab:hover{border-color:rgba(250,204,21,0.2);color:#94a3b8;}
-  .bk-tab.active{background:rgba(250,204,21,0.08);border-color:rgba(250,204,21,0.28);color:var(--gold);}
   .bk-count{font-size:11px;font-weight:700;color:#334155;margin-bottom:10px;}
   .bk-list{display:flex;flex-direction:column;gap:10px;}
-  .bk-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;animation:cardIn 0.3s ease both;transition:border-color 0.2s;}
+  .bk-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid rgba(249,115,22,0.5);border-radius:16px;overflow:hidden;animation:cardIn 0.3s ease both;transition:border-color 0.2s;}
   .bk-card:hover{border-color:#1e2d45;}
-  .bk-card.puja{border-left:3px solid rgba(249,115,22,0.5);}
-  .bk-card.cheena{border-left:3px solid rgba(251,191,36,0.5);}
   .bk-ch{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;transition:background 0.15s;}
   .bk-ch:hover{background:rgba(255,255,255,0.02);}
-  .bk-badge{font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
-  .bk-badge.puja{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);color:var(--orange);}
-  .bk-badge.cheena{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:var(--amber);}
   .bk-cm{flex:1;min-width:0;}
   .bk-cn{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .bk-cs{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}

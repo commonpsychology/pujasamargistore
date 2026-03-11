@@ -21,6 +21,7 @@ export async function POST(request) {
       customerName,
       customerPhone,
       customerAddress,
+      userId,           // ← FIX: received from checkout page
     } = body;
 
     if (!customerName?.trim())    return NextResponse.json({ error: 'Name is required' },    { status: 400 });
@@ -58,6 +59,7 @@ export async function POST(request) {
         payment_status:    'pending',
         order_status:      'pending',
         payment_reference,
+        user_id:           userId ?? null,   // ← FIX: save user_id so /account/orders works
       }])
       .select('id, created_at, payment_reference')
       .single();

@@ -12,6 +12,7 @@
     "@supabase/supabase-js": "^2.98.0",
     "bcryptjs": "^3.0.3",
     "leaflet": "^1.9.4",
+    "nepali-date-converter": "^3.4.0",
     "next": "16.1.6",
     "pg": "^8.19.0",
     "react": "19.2.3",
