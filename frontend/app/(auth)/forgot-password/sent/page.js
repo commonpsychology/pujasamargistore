@@ -6,11 +6,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '../../../../../../src/lib/supabaseClient';
-
-const RESEND_COOLDOWN = 60; // seconds
-
-export default function ForgotPasswordSentPage() {
+import { supabase } from '@/lib/supabaseClient';export default function ForgotPasswordSentPage() {
   const params  = useSearchParams();
   const email   = params.get('email') || '';
 

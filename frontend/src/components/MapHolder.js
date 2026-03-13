@@ -1,10 +1,10 @@
-'use client'; // MUST be first
+'use client';
 
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Custom marker icon
 const markerIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -14,6 +14,11 @@ const markerIcon = L.icon({
 });
 
 export default function MapHolder({ center = [27.7172, 85.3240], zoom = 13 }) {
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
   return (
     <div style={{ height: '180px', width: '100%', borderRadius: '18px', overflow: 'hidden' }}>
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>

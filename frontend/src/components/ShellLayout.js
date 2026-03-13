@@ -9,7 +9,7 @@ import Navbar     from './Navbar';
 import Footer     from './Footer';
 import LangToggle from './LangToggle';
 
-const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/admin/orders', '/admin/messages', '/admin/bookings'];
+const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/admin-login', '/admin/orders', '/admin/messages', '/admin/bookings'];
 
 export default function ShellLayout({ children }) {
   const pathname   = usePathname();

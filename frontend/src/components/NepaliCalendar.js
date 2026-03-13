@@ -70,37 +70,36 @@ export default function NepaliCalendar() {
         </p>
       </div>
 
-      {/* ── Calendar iframe ── */}
-      <div style={{
-        background: '#27272a',
-        border: '1px solid #3f3f46',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        padding: isMobile ? '10px' : '16px',
-        // FIX iii: never wider than container
-        width: '100%',
-        boxSizing: 'border-box',
-      }}>
-        <iframe
-          src="https://www.ashesh.com.np/calendar-widget/calendar.php?tithi=1&header_color=d97706&api=802225q293"
-          frameBorder="0"
-          scrolling={isMobile ? 'auto' : 'no'}
-          style={{
-            border: 'none',
-            // FIX ii: dynamic height based on device
-            width: '100%',
-            height: iframeHeight,
-            borderRadius: '8px',
-            display: 'block',
-            // FIX iii: no overflow
-            maxWidth: '100%',
-          }}
-          allowtransparency="true"
-          title="Nepali Calendar"
-          // FIX iv: allow mobile scrolling inside iframe if needed
-          allow="fullscreen"
-        />
-      </div>
+<div style={{
+  background: '#080d18',
+  border: '1px solid #080d18',
+  borderRadius: '16px',
+  overflow: 'hidden',
+  padding: '0',
+  width: '100%',
+  boxSizing: 'border-box',
+  position: 'relative',
+}}>
+ <iframe
+  src="https://www.ashesh.com.np/calendar-widget/calendar.php?tithi=1&header_color=d97706&api=802225q293"
+  scrolling={isMobile ? 'auto' : 'no'}
+  style={{
+    border: 'none',
+    outline: 'none',
+    width: '100%',
+    height: iframeHeight,
+    display: 'block',
+    maxWidth: '100%',
+    filter: 'invert(1) hue-rotate(180deg)',
+    background: '#101314',
+    colorScheme: 'dark',
+    backgroundColor: '#101314',
+    opacity: 1,
+  }}
+  allowtransparency="true"
+  title="Nepali Calendar"
+/>
+</div>
 
       {/* ── Pooja reminder banner ── */}
       <div style={{

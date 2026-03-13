@@ -6,9 +6,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../../../src/lib/supabaseClient';
-
-const SYMBOLS = ['ॐ', '☸', '🪔', '✦', '❋', '᳚'];
+import { supabase } from '@/lib/supabaseClient';const SYMBOLS = ['ॐ', '☸', '🪔', '✦', '❋', '᳚'];
 
 export default function ForgotPasswordPage() {
   const router  = useRouter();

@@ -7,7 +7,7 @@ import ReviewsSlider  from '../src/components/ReviewsSlider';
 import ProductCard    from '../src/components/ProductCard';
 import HomeSections   from '../src/components/HomeSections';
 import { PRODUCTS }   from '../src/data';
-
+import FestivalCountdown from '../src/components/FestivalCountdown';
 export default function Home() {
   return (
     <div style={{ width: '100%' }}>
@@ -34,11 +34,14 @@ export default function Home() {
       {/* ── NEPALI CALENDAR ── */}
       <NepaliCalendar />
 
-      {/* ── CUSTOMER REVIEWS ── */}
-      <ReviewsSlider />
+     
+      
 
       {/* ── NEW SECTIONS ── */}
       <HomeSections />
+
+ {/* ── CUSTOMER REVIEWS ── */}
+      <ReviewsSlider />
 
     </div>
   );

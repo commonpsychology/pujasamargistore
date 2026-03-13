@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import RashifalSection from './RashifalSection';
 import { useLang } from '../context/LangContext';
 
 const EF = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
@@ -303,6 +304,9 @@ export default function HomeSections() {
         .hs-cta-btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
         .hs-cta-main,.hs-cta-call { font-size:15px; padding:14px 28px; }
       `}</style>
+
+      {/* ── RASHIFAL first ── */}
+      <RashifalSection />
 
       <TrustStrip />
       <ServicesSection />

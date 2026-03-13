@@ -18,10 +18,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../../../../src/lib/supabaseClient';
-
-const MIN_PW_LENGTH = 8;
-
+import { supabase } from '@/lib/supabaseClient';
 function getStrength(pw) {
   if (!pw) return 0;
   let s = 0;
