@@ -1,0 +1,100 @@
+/* globals.css */
+/* FIX iii: Prevent ALL horizontal scrolling across the entire site */
+/* FIX v:   Cross-device emoji rendering */
+
+@import "tailwindcss";
+
+:root {
+  --background: #080d18;
+  --foreground: #f1f5f9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+s
+/* ── FIX iii: Eliminate horizontal scroll globally ── */
+html {
+  overflow-x: hidden;
+  /* Ensures scrollbar doesn't cause layout shift */
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'DM Sans', 'Inter', Arial, Helvetica, sans-serif;
+  /* FIX iii: hard block on horizontal overflow */
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ── FIX iii: Every element respects box model ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ── FIX v: Emoji rendering on ALL devices including Android/mobile ── */
+/* The trick: wrap emojis in a span, or apply this to elements containing them */
+.emoji,
+[data-emoji],
+/* Common emoji containers in your UI */
+.drop-item-icon,
+.ao-empty-icon,
+.aom-prog-label,
+.nav-emoji {
+  font-family:
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Noto Color Emoji",
+    "Android Emoji",
+    EmojiSymbols,
+    sans-serif !important;
+  font-style: normal;
+  /* FIX v: Force color emoji on Android Chrome */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── FIX v: Prevent emoji from being rendered as text symbols on some Android ── */
+/* This targets the Unicode emoji range to enforce color rendering */
+@supports (font-variant-emoji: emoji) {
+  .emoji, [data-emoji] {
+    font-variant-emoji: emoji;
+  }
+}
+
+/* ── Smooth scrolling ── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── FIX iv: Mobile base improvements ── */
+/* Prevent text from being too small or too wide on mobile */
+@media (max-width: 480px) {
+  body {
+    font-size: 15px;
+  }
+  /* Prevent images from causing overflow */
+  img, video, iframe {
+    max-width: 100%;
+  }
+}
+
+/* ── Scrollbar styling (desktop) ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0c1220;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a2d4a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #243752;
+}
